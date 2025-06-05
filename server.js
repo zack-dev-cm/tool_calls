@@ -15,12 +15,18 @@ const app = express();
 app.use(cors());
 
 app.get('/session', async (req, res) => {
+  let tools = [];
   try {
     const toolsRes = await fetch(`${MCP_SERVER_URL}/v1/tool`);
     const toolsData = await toolsRes.json();
-    const tools = Array.isArray(toolsData)
+    tools = Array.isArray(toolsData)
       ? toolsData
       : toolsData.tools ?? toolsData.data ?? [];
+  } catch (err) {
+    console.warn('Unable to fetch tools:', err);
+  }
+
+  try {
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
