@@ -1,5 +1,12 @@
 const hand = new Hand();
 const messagesContainer = document.getElementById('messages');
+const speakBtn = document.getElementById('speak-btn');
+const voiceNameInput = document.getElementById('voice-name');
+const voiceInstructionsInput = document.getElementById('voice-instructions');
+const speechTextInput = document.getElementById('speech-text');
+const realtimeBtn = document.getElementById('realtime-toggle');
+const realtimeIcon = document.getElementById('realtime-icon');
+let realtimeActive = false;
 
 function addMessage(role, text) {
         const div = document.createElement('div');
@@ -10,10 +17,59 @@ function addMessage(role, text) {
 }
 
 function talkToTheHand() {
-	hand
-		.connect()
-		.then(() => console.log('Hand is ready'))
-		.catch((err) => console.error(err));
+        hand
+                .connect()
+                .then(() => console.log('Hand is ready'))
+                .catch((err) => console.error(err));
+}
+
+function toggleRealtime() {
+        if (realtimeActive) {
+                peerConnection.close();
+                realtimeActive = false;
+                realtimeBtn.classList.add('pulse');
+                realtimeIcon.textContent = 'play_arrow';
+        } else {
+                startRealtime();
+                realtimeActive = true;
+                realtimeBtn.classList.remove('pulse');
+                realtimeIcon.textContent = 'stop';
+        }
+}
+
+function startRealtime() {
+        talkToTheHand();
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                stream.getTracks().forEach((track) =>
+                        peerConnection.addTransceiver(track, { direction: 'sendrecv' }),
+                );
+
+                peerConnection.createOffer().then((offer) => {
+                        peerConnection.setLocalDescription(offer);
+                        fetch('/session')
+                                .then((tokenResponse) => tokenResponse.json())
+                                .then((data) => {
+                                        const EPHEMERAL_KEY = data.result.client_secret.value;
+                                        const baseUrl = 'https://api.openai.com/v1/realtime';
+                                        const model = 'gpt-4o-realtime-preview-2024-12-17';
+                                        fetch(`${baseUrl}?model=${model}`, {
+                                                method: 'POST',
+                                                body: offer.sdp,
+                                                headers: {
+                                                        Authorization: `Bearer ${EPHEMERAL_KEY}`,
+                                                        'Content-Type': 'application/sdp',
+                                                },
+                                        })
+                                                .then((r) => r.text())
+                                                .then((answer) => {
+                                                        peerConnection.setRemoteDescription({
+                                                                sdp: answer,
+                                                                type: 'answer',
+                                                        });
+                                                });
+                                });
+                });
+        });
 }
 
 const fns = {
@@ -66,9 +122,27 @@ async function configureData() {
 }
 
 dataChannel.addEventListener('open', (ev) => {
-	console.log('Opening data channel', ev);
-	configureData();
+        console.log('Opening data channel', ev);
+        configureData();
 });
+
+speakBtn.addEventListener('click', async () => {
+        const voice = voiceNameInput.value;
+        const instructions = voiceInstructionsInput.value;
+        const text = speechTextInput.value;
+        const response = await fetch('/speech', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, voice, instructions }),
+        });
+        const buffer = await response.arrayBuffer();
+        const blob = new Blob([buffer], { type: 'audio/mpeg' });
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audio.play();
+});
+
+realtimeBtn.addEventListener('click', toggleRealtime);
 
 // {
 //     "type": "response.function_call_arguments.done",
@@ -119,39 +193,4 @@ dataChannel.addEventListener('message', async (ev) => {
                 dataChannel.send(JSON.stringify(event));
                 dataChannel.send(JSON.stringify({ type: 'response.create' }));
         }
-});
-
-// Capture microphone
-navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-	// Add microphone to PeerConnection
-	stream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
-
-	peerConnection.createOffer().then((offer) => {
-		peerConnection.setLocalDescription(offer);
-		fetch('/session')
-			.then((tokenResponse) => tokenResponse.json())
-			.then((data) => {
-				const EPHEMERAL_KEY = data.result.client_secret.value;
-				const baseUrl = 'https://api.openai.com/v1/realtime';
-				const model = 'gpt-4o-realtime-preview-2024-12-17';
-				fetch(`${baseUrl}?model=${model}`, {
-					method: 'POST',
-					body: offer.sdp,
-					headers: {
-						Authorization: `Bearer ${EPHEMERAL_KEY}`,
-						'Content-Type': 'application/sdp',
-					},
-				})
-					.then((r) => r.text())
-					.then((answer) => {
-						// Accept answer from Realtime WebRTC API
-						peerConnection.setRemoteDescription({
-							sdp: answer,
-							type: 'answer',
-						});
-					});
-			});
-
-		// Send WebRTC Offer to Workers Realtime WebRTC API Relay
-	});
 });

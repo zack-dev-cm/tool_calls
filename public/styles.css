@@ -55,3 +55,11 @@ footer a {
     align-self: flex-start;
     background-color: #eceff1;
 }
+
+#realtime-toggle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    font-size: 36px;
+    line-height: 80px;
+}
