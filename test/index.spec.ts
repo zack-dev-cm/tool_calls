@@ -39,6 +39,8 @@ describe('Hello World worker', () => {
 			  <main class="container content">
 			    <div class="section">
 			      <button class="btn waves-effect waves-light" onclick="talkToTheHand()">Talk to the hand</button>
+			      <button id="start-voice" class="btn waves-effect waves-light green">Start Voice</button>
+			      <button id="stop-voice" class="btn waves-effect waves-light red" disabled>Stop Voice</button>
 			    </div>
 			    <div id="chat" class="chat">
 			      <div id="messages" class="messages"></div>
