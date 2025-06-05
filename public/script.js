@@ -257,3 +257,16 @@ function stopRealtime() {
 document.getElementById('start-voice').addEventListener('click', startRealtime);
 document.getElementById('stop-voice').addEventListener('click', stopRealtime);
 document.getElementById('set-instructions').addEventListener('click', sendInstructions);
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const tools = await loadTools();
+    const list = document.getElementById('tools-list');
+    if (list) {
+        list.innerHTML = '';
+        tools.forEach((tool) => {
+            const li = document.createElement('li');
+            li.textContent = tool.name;
+            list.appendChild(li);
+        });
+    }
+});

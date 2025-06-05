@@ -5,17 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Material Chat Demo</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css" />
 </head>
-<body class="blue-grey lighten-5">
-  <nav>
-    <div class="nav-wrapper teal">
+<body>
+  <nav class="primary">
+    <div class="nav-wrapper">
       <a href="#" class="brand-logo center">Material Chat</a>
     </div>
   </nav>
-  <main class="container content">
-    <div class="section">
+  <main class="container content layout">
+    <aside class="sidebar">
       <button class="btn waves-effect waves-light" onclick="talkToTheHand()">Talk to the hand</button>
+      <div id="tools-panel" class="tools-panel">
+        <h5>Tools</h5>
+        <ul id="tools-list"></ul>
+      </div>
+    </aside>
+    <div class="section main-controls">
       <button id="start-voice" class="btn waves-effect waves-light green">Start Voice</button>
       <button id="stop-voice" class="btn waves-effect waves-light red" disabled>Stop Voice</button>
       <div class="instructions-input">
