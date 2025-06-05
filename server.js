@@ -13,6 +13,8 @@ app.use(cors());
 
 app.get('/session', async (req, res) => {
   try {
+    const toolsRes = await fetch(`${process.env.MCP_SERVER_URL}/tools`);
+    const tools = await toolsRes.json();
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
@@ -26,10 +28,37 @@ app.get('/session', async (req, res) => {
       }),
     });
     const result = await response.json();
-    res.json({ result });
+    res.json({ result, tools });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create session' });
+  }
+});
+
+app.get('/tools', async (req, res) => {
+  try {
+    const response = await fetch(`${process.env.MCP_SERVER_URL}/tools`);
+    const tools = await response.json();
+    res.json({ tools });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch tools' });
+  }
+});
+
+app.post('/tools/:name', express.json(), async (req, res) => {
+  try {
+    const { name } = req.params;
+    const response = await fetch(`${process.env.MCP_SERVER_URL}/tools/${encodeURIComponent(name)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body || {}),
+    });
+    const result = await response.json();
+    res.json({ result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to trigger tool' });
   }
 });
 
