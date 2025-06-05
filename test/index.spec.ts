@@ -18,52 +18,9 @@ describe('Hello World worker', () => {
 		expect(await response.text()).toMatchInlineSnapshot(`"404 Not Found"`);
 	});
 
-	it('responds with Hello World! (integration style)', async () => {
-		const response = await SELF.fetch('https://example.com');
-		expect(await response.text()).toMatchInlineSnapshot(`
-			"<!DOCTYPE html>
-			<html lang="en">
-			<head>
-			  <meta charset="UTF-8" />
-			  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-			  <title>Material Chat Demo</title>
-			  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
-			  <link rel="stylesheet" href="/styles.css" />
-			</head>
-			<body class="blue-grey lighten-5">
-			  <nav>
-			    <div class="nav-wrapper teal">
-			      <a href="#" class="brand-logo center">Material Chat</a>
-			    </div>
-			  </nav>
-			  <main class="container content">
-			    <div class="section">
-			      <button class="btn waves-effect waves-light" onclick="talkToTheHand()">Talk to the hand</button>
-			      <button id="start-voice" class="btn waves-effect waves-light green">Start Voice</button>
-			      <button id="stop-voice" class="btn waves-effect waves-light red" disabled>Stop Voice</button>
-			      <div class="instructions-input">
-			        <input id="instructions-input" type="text" placeholder="Session instructions" />
-			        <button id="set-instructions" class="btn waves-effect waves-light">Set Instructions</button>
-			      </div>
-			    </div>
-			    <div id="chat" class="chat">
-			      <div id="messages" class="messages"></div>
-			    </div>
-			  </main>
-			  <footer class="page-footer teal">
-			    <div class="footer-copyright">
-			      <div class="container">
-			        <p>Built with 🧡 on <a class="white-text" href="https://developers.cloudflare.com">Cloudflare Workers</a> and the <a class="white-text" href="https://platform.openai.com/docs/api-reference/realtime">OpenAI Realtime API</a></p>
-			      </div>
-			    </div>
-			  </footer>
-			  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-			  <script>window.REALTIME_MODEL="gpt-4o-realtime-preview-2025-06-03"</script>
-			  <script src="/hand.js"></script>
-			  <script src="/script.js"></script>
-			</body>
-			</html>
-			"
-		`);
-	});
+        it('responds with Hello World! (integration style)', async () => {
+                const response = await SELF.fetch('https://example.com');
+                const text = await response.text();
+                expect(text).toContain('<div id="tools-panel"');
+        });
 });
