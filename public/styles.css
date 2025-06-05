@@ -22,5 +22,34 @@ footer {
 }
 
 footer a {
-	color: #fff;
+        color: #fff;
+}
+
+/* Chat layout */
+.chat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 1rem;
+}
+
+.messages {
+    overflow-y: auto;
+}
+
+.message {
+    max-width: 70%;
+    padding: 8px 12px;
+    border-radius: 12px;
+    margin-bottom: 4px;
+}
+
+.message.user {
+    align-self: flex-end;
+    background-color: #dcf8c6;
+}
+
+.message.assistant {
+    align-self: flex-start;
+    background-color: #eee;
 }
