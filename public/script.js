@@ -231,29 +231,51 @@ function setupPeerConnection() {
 }
 
 async function startRealtime() {
-	setupPeerConnection();
-	mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-	mediaStream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
-	const offer = await peerConnection.createOffer();
-	await peerConnection.setLocalDescription(offer);
-	const tokenResponse = await fetch('/session');
-	const data = await tokenResponse.json();
-	const EPHEMERAL_KEY = data.result.client_secret.value;
-	const baseUrl = 'https://api.openai.com/v1/realtime';
-	const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2024-12-17';
-	const r = await fetch(`${baseUrl}?model=${model}`, {
-		method: 'POST',
-		body: offer.sdp,
-		headers: {
-			Authorization: `Bearer ${EPHEMERAL_KEY}`,
-			'Content-Type': 'application/sdp',
-		},
-	});
-	const answer = await r.text();
-	await peerConnection.setRemoteDescription({
-		sdp: answer,
-		type: 'answer',
-	});
+        try {
+                setupPeerConnection();
+                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaStream.getTracks().forEach((track) =>
+                        peerConnection.addTransceiver(track, { direction: 'sendrecv' })
+                );
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                const tokenResponse = await fetch('/session');
+                console.log('Session status', tokenResponse.status);
+                if (!tokenResponse.ok) {
+                        const body = await tokenResponse.text();
+                        console.error('Session error body', body);
+                        alert('Failed to start session. Please try again.');
+                        throw new Error('Session request failed');
+                }
+                const data = await tokenResponse.json();
+                const EPHEMERAL_KEY = data.result.client_secret.value;
+                const baseUrl = 'https://api.openai.com/v1/realtime';
+                const model =
+                        window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2024-12-17';
+                const r = await fetch(`${baseUrl}?model=${model}`, {
+                        method: 'POST',
+                        body: offer.sdp,
+                        headers: {
+                                Authorization: `Bearer ${EPHEMERAL_KEY}`,
+                                'Content-Type': 'application/sdp',
+                        },
+                });
+                console.log('OpenAI status', r.status);
+                if (!r.ok) {
+                        const body = await r.text();
+                        console.error('OpenAI error body', body);
+                        alert('Failed to connect to OpenAI. Please try again.');
+                        throw new Error('OpenAI connection failed');
+                }
+                const answer = await r.text();
+                await peerConnection.setRemoteDescription({
+                        sdp: answer,
+                        type: 'answer',
+                });
+        } catch (err) {
+                console.error(err);
+                stopRealtime();
+        }
 }
 
 function stopRealtime() {
