@@ -28,7 +28,7 @@ app.get('/session', async (req, res) => {
       body: JSON.stringify({
         model: 'gpt-4o-realtime-preview-2025-06-03',
         instructions: DEFAULT_INSTRUCTIONS,
-        voice: 'ash',
+        voice: 'nova',
       }),
     });
     const result = await response.json();
