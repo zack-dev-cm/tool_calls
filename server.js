@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+require('dotenv').config({ path: '.dev.vars', override: true });
 
 const DEFAULT_INSTRUCTIONS = `You are helpful and have some tools installed.
 
