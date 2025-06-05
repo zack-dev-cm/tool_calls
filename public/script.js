@@ -99,21 +99,33 @@ async function loadTools() {
 }
 
 async function configureData() {
-	console.log('Configuring data channel');
-	const tools = await loadTools();
-	const allTools = tools.concat(TOOL_DESCRIPTORS);
-	const event = {
-		type: 'session.update',
-		session: {
-			modalities: ['text', 'audio'],
-			tools: allTools,
-		},
-	};
-	const includesAll = TOOL_DESCRIPTORS.every((t) => allTools.some((tool) => tool.name === t.name));
-	if (!includesAll) {
-		console.error('Missing local tools in session.update', event);
-	}
-	dataChannel.send(JSON.stringify(event));
+        console.log('Configuring data channel');
+        const tools = await loadTools();
+        const allTools = tools.concat(TOOL_DESCRIPTORS);
+        const event = {
+                type: 'session.update',
+                session: {
+                        modalities: ['text', 'audio'],
+                        tools: allTools,
+                },
+        };
+        const includesAll = TOOL_DESCRIPTORS.every((t) => allTools.some((tool) => tool.name === t.name));
+        if (!includesAll) {
+                console.error('Missing local tools in session.update', event);
+        }
+        dataChannel.send(JSON.stringify(event));
+}
+
+function sendInstructions() {
+        const input = document.getElementById('instructions-input');
+        if (!input || !dataChannel || dataChannel.readyState !== 'open') return;
+        const event = {
+                type: 'session.update',
+                session: {
+                        instructions: input.value,
+                },
+        };
+        dataChannel.send(JSON.stringify(event));
 }
 
 function setupPeerConnection() {
@@ -126,11 +138,12 @@ function setupPeerConnection() {
 		document.body.appendChild(el);
 	};
 
-	dataChannel = peerConnection.createDataChannel('oai-events');
-	dataChannel.addEventListener('open', (ev) => {
-		console.log('Opening data channel', ev);
-		configureData();
-	});
+        dataChannel = peerConnection.createDataChannel('oai-events');
+        dataChannel.addEventListener('open', (ev) => {
+                console.log('Opening data channel', ev);
+                configureData();
+                sendInstructions();
+        });
 
         dataChannel.addEventListener('message', async (ev) => {
                 const msg = JSON.parse(ev.data);
@@ -243,3 +256,4 @@ function stopRealtime() {
 
 document.getElementById('start-voice').addEventListener('click', startRealtime);
 document.getElementById('stop-voice').addEventListener('click', stopRealtime);
+document.getElementById('set-instructions').addEventListener('click', sendInstructions);

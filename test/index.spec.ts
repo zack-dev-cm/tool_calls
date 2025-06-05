@@ -41,6 +41,10 @@ describe('Hello World worker', () => {
 			      <button class="btn waves-effect waves-light" onclick="talkToTheHand()">Talk to the hand</button>
 			      <button id="start-voice" class="btn waves-effect waves-light green">Start Voice</button>
 			      <button id="stop-voice" class="btn waves-effect waves-light red" disabled>Stop Voice</button>
+			      <div class="instructions-input">
+			        <input id="instructions-input" type="text" placeholder="Session instructions" />
+			        <button id="set-instructions" class="btn waves-effect waves-light">Set Instructions</button>
+			      </div>
 			    </div>
 			    <div id="chat" class="chat">
 			      <div id="messages" class="messages"></div>
