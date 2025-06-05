@@ -10,17 +10,26 @@ export interface ToolDefinition {
 const DEFAULT_URL = process?.env?.MCP_SERVER_URL ?? '';
 
 export async function fetchTools(baseUrl: string = DEFAULT_URL): Promise<ToolDefinition[]> {
-    const res = await fetch(`${baseUrl}/tools`);
+    const res = await fetch(`${baseUrl}/v1/tool`);
     if (!res.ok) throw new Error(`Failed to fetch tools: ${res.status}`);
-    return res.json();
+    const data = await res.json();
+    if (Array.isArray(data)) return data as ToolDefinition[];
+    if (Array.isArray(data.tools)) return data.tools as ToolDefinition[];
+    if (Array.isArray(data.data)) return data.data as ToolDefinition[];
+    return [];
 }
 
 export async function triggerTool(name: string, args: unknown, baseUrl: string = DEFAULT_URL): Promise<unknown> {
-    const res = await fetch(`${baseUrl}/tools/${encodeURIComponent(name)}`, {
+    const res = await fetch(`${baseUrl}/v1/tool/${encodeURIComponent(name)}/invoke`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(args ?? {}),
     });
     if (!res.ok) throw new Error(`Failed to trigger tool ${name}: ${res.status}`);
-    return res.json();
+    const data = await res.json();
+    if (data && typeof data === 'object') {
+        if ('result' in data) return (data as any).result;
+        if ('data' in data) return (data as any).data;
+    }
+    return data;
 }
