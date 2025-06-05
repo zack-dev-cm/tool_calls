@@ -1,24 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Just a website</title>
-	<link rel="stylesheet" href="/styles.css">
-	<script src="/hand.js"></script>
-	<script src="/script.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Material Chat Demo</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
 </head>
-<body>
-	<div class="content">
-		<h1>This is a plain old website</h1>
-		<p>This is just a plain website that is using plain old JavaScript</p>
-        <button onclick="talkToTheHand()">Talk to the hand</button>
-        <div id="chat" class="chat">
-                <div id="messages" class="messages"></div>
-        </div>
-	</div>
-	<footer>
-		<p>Built with 🧡 on <a href="https://developers.cloudflare.com">Cloudflare Workers</a> and the <a href="https://platform.openai.com/docs/api-reference/realtime">OpenAI Realtime API</a></p>
-	</footer>
+<body class="blue-grey lighten-5">
+  <nav>
+    <div class="nav-wrapper teal">
+      <a href="#" class="brand-logo center">Material Chat</a>
+    </div>
+  </nav>
+  <main class="container content">
+    <div class="section">
+      <button class="btn waves-effect waves-light" onclick="talkToTheHand()">Talk to the hand</button>
+    </div>
+    <div id="chat" class="chat">
+      <div id="messages" class="messages"></div>
+    </div>
+  </main>
+  <footer class="page-footer teal">
+    <div class="footer-copyright">
+      <div class="container">
+        <p>Built with 🧡 on <a class="white-text" href="https://developers.cloudflare.com">Cloudflare Workers</a> and the <a class="white-text" href="https://platform.openai.com/docs/api-reference/realtime">OpenAI Realtime API</a></p>
+      </div>
+    </div>
+  </footer>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="/hand.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>
