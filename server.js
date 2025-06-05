@@ -14,8 +14,11 @@ app.use(cors());
 
 app.get('/session', async (req, res) => {
   try {
-    const toolsRes = await fetch(`${process.env.MCP_SERVER_URL}/tools`);
-    const tools = await toolsRes.json();
+    const toolsRes = await fetch(`${process.env.MCP_SERVER_URL}/v1/tool`);
+    const toolsData = await toolsRes.json();
+    const tools = Array.isArray(toolsData)
+      ? toolsData
+      : toolsData.tools ?? toolsData.data ?? [];
     const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
       method: 'POST',
       headers: {
@@ -38,8 +41,9 @@ app.get('/session', async (req, res) => {
 
 app.get('/tools', async (req, res) => {
   try {
-    const response = await fetch(`${process.env.MCP_SERVER_URL}/tools`);
-    const tools = await response.json();
+    const response = await fetch(`${process.env.MCP_SERVER_URL}/v1/tool`);
+    const data = await response.json();
+    const tools = Array.isArray(data) ? data : data.tools ?? data.data ?? [];
     res.json({ tools });
   } catch (err) {
     console.error(err);
@@ -50,12 +54,22 @@ app.get('/tools', async (req, res) => {
 app.post('/tools/:name', express.json(), async (req, res) => {
   try {
     const { name } = req.params;
-    const response = await fetch(`${process.env.MCP_SERVER_URL}/tools/${encodeURIComponent(name)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body || {}),
-    });
-    const result = await response.json();
+    const response = await fetch(
+      `${process.env.MCP_SERVER_URL}/v1/tool/${encodeURIComponent(name)}/invoke`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body || {}),
+      },
+    );
+    const data = await response.json();
+    const result = data && typeof data === 'object'
+      ? 'result' in data
+        ? data.result
+        : 'data' in data
+          ? data.data
+          : data
+      : data;
     res.json({ result });
   } catch (err) {
     console.error(err);
