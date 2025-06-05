@@ -29,7 +29,7 @@ app.get('/session', async (c) => {
                 body: JSON.stringify({
                         model,
                         instructions: DEFAULT_INSTRUCTIONS,
-                        voice: 'ash',
+                        voice: 'nova',
                 }),
         });
         const result = await response.json();
