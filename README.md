@@ -7,7 +7,8 @@ This project is a [Cloudflare Workers](https://developers.cloudflare.com) app us
 
 ## Develop
 
-Copy [.dev.vars.example](./.dev.vars.example) to `.dev.vars` and fill out your OpenAI API Key.
+Copy [.dev.vars.example](./.dev.vars.example) to `.dev.vars` and set both `OPENAI_API_KEY` and `MCP_SERVER_URL`.
+`MCP_SERVER_URL` is used for fetching external tools (for example `http://localhost:3000`).
 
 Install your dependencies
 
