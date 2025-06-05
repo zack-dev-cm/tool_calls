@@ -1,6 +1,9 @@
 const hand = new Hand();
 const messagesContainer = document.getElementById('messages');
 
+let recognition;
+let toolsList = [];
+
 function addMessage(role, text) {
         const div = document.createElement('div');
         div.className = `message ${role}`;
@@ -28,11 +31,69 @@ const fns = {
 		document.body.style.color = color;
 		return { success: true, color };
 	},
-	showFingers: async ({ numberOfFingers }) => {
-		await hand.sendCommand(numberOfFingers);
-		return { success: true, numberOfFingers };
-	},
+        showFingers: async ({ numberOfFingers }) => {
+                await hand.sendCommand(numberOfFingers);
+                return { success: true, numberOfFingers };
+        },
 };
+
+function handleVoiceCommand(text) {
+        const lower = text.toLowerCase().trim();
+        addMessage('user', text);
+        if (lower.startsWith('change background color to ')) {
+                const color = lower.replace('change background color to ', '');
+                fns.changeBackgroundColor({ color });
+                return;
+        }
+        if (lower.startsWith('change text color to ')) {
+                const color = lower.replace('change text color to ', '');
+                fns.changeTextColor({ color });
+                return;
+        }
+        if (lower.startsWith('show fingers ')) {
+                const num = parseInt(lower.replace('show fingers ', ''), 10);
+                if (!isNaN(num)) fns.showFingers({ numberOfFingers: num });
+                return;
+        }
+        if (fns[lower]) {
+                fns[lower]({});
+                return;
+        }
+        const tool = toolsList.find((t) => t.name.toLowerCase() === lower);
+        if (tool) {
+                fetch(`/tools/${tool.name}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({}),
+                });
+        }
+}
+
+function startVoice() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+                alert('Speech recognition not supported');
+                return;
+        }
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = false;
+        recognition.onresult = (e) => {
+                const transcript = Array.from(e.results)
+                        .map((r) => r[0].transcript)
+                        .join(' ');
+                handleVoiceCommand(transcript);
+        };
+        recognition.start();
+        document.getElementById('start-voice').disabled = true;
+        document.getElementById('stop-voice').disabled = false;
+}
+
+function stopVoice() {
+        if (recognition) recognition.stop();
+        document.getElementById('start-voice').disabled = false;
+        document.getElementById('stop-voice').disabled = true;
+}
 
 // Create a WebRTC Agent
 const peerConnection = new RTCPeerConnection();
@@ -49,7 +110,8 @@ const dataChannel = peerConnection.createDataChannel('oai-events');
 async function loadTools() {
         const res = await fetch('/tools');
         const data = await res.json();
-        return data.tools || [];
+        toolsList = data.tools || [];
+        return toolsList;
 }
 
 async function configureData() {
@@ -69,6 +131,7 @@ dataChannel.addEventListener('open', (ev) => {
 	console.log('Opening data channel', ev);
 	configureData();
 });
+
 
 // {
 //     "type": "response.function_call_arguments.done",
@@ -155,3 +218,5 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
 		// Send WebRTC Offer to Workers Realtime WebRTC API Relay
 	});
 });
+document.getElementById('start-voice').addEventListener('click', startVoice);
+document.getElementById('stop-voice').addEventListener('click', stopVoice);
