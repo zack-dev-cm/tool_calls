@@ -13,7 +13,7 @@ body {
 
 /* Sticky footer styling */
 footer {
-    background-color: #333;
+    background-color: #009688;
     color: #fff;
     text-align: center;
     padding: 10px;
@@ -29,27 +29,29 @@ footer a {
 .chat {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     margin-top: 1rem;
 }
 
 .messages {
     overflow-y: auto;
+    padding-bottom: 1rem;
 }
 
 .message {
     max-width: 70%;
-    padding: 8px 12px;
-    border-radius: 12px;
+    padding: 12px 16px;
+    border-radius: 16px;
     margin-bottom: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
 .message.user {
     align-self: flex-end;
-    background-color: #dcf8c6;
+    background-color: #c8e6c9;
 }
 
 .message.assistant {
     align-self: flex-start;
-    background-color: #eee;
+    background-color: #eceff1;
 }
