@@ -4,13 +4,15 @@ let toolsList = [];
 let peerConnection;
 let dataChannel;
 let mediaStream;
+let currentAssistantEl;
 
-function addMessage(role, text) {
-	const div = document.createElement('div');
-	div.className = `message ${role}`;
-	div.textContent = text;
-	messagesContainer.appendChild(div);
-	messagesContainer.scrollTop = messagesContainer.scrollHeight;
+function addMessage(role, text, returnElement = false) {
+        const div = document.createElement('div');
+        div.className = `message ${role}`;
+        div.textContent = text;
+        messagesContainer.appendChild(div);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        if (returnElement) return div;
 }
 
 function talkToTheHand() {
@@ -130,17 +132,29 @@ function setupPeerConnection() {
 		configureData();
 	});
 
-	dataChannel.addEventListener('message', async (ev) => {
-		const msg = JSON.parse(ev.data);
-		if (msg.type && msg.type.startsWith('transcript')) {
-			const text = msg.transcript || msg.text;
-			if (text) addMessage('user', text);
-		}
-		if (msg.type && msg.type.startsWith('response')) {
-			const text = msg.text || msg.delta;
-			if (text) addMessage('assistant', text);
-		}
-		if (msg.type === 'response.function_call_arguments.done') {
+        dataChannel.addEventListener('message', async (ev) => {
+                const msg = JSON.parse(ev.data);
+                if (msg.type && msg.type.startsWith('transcript')) {
+                        const text = msg.transcript || msg.text;
+                        if (text) addMessage('user', text);
+                }
+                if (msg.type === 'response.text.delta') {
+                        const text = msg.delta || msg.text;
+                        if (text) {
+                                if (!currentAssistantEl) {
+                                        currentAssistantEl = addMessage('assistant', text, true);
+                                } else {
+                                        currentAssistantEl.textContent += text;
+                                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                }
+                        }
+                } else if (msg.type === 'response.text.done' || msg.type === 'response.done') {
+                        currentAssistantEl = undefined;
+                } else if (msg.type && msg.type.startsWith('response')) {
+                        const text = msg.text || msg.delta;
+                        if (text) addMessage('assistant', text);
+                }
+                if (msg.type === 'response.function_call_arguments.done') {
 			const fn = fns[msg.name];
 			let result;
 			const args = JSON.parse(msg.arguments);
