@@ -7,8 +7,8 @@ This project is a [Cloudflare Workers](https://developers.cloudflare.com) app us
 
 ## Develop
 
-Copy [.dev.vars.example](./.dev.vars.example) to `.dev.vars` and set both `OPENAI_API_KEY` and `MCP_SERVER_URL`.
-`MCP_SERVER_URL` is used for fetching external tools (for example `http://localhost:3000`).
+Copy [.dev.vars.example](./.dev.vars.example) to `.dev.vars` and set `OPENAI_API_KEY`, `MCP_SERVER_URL`, and optionally `OPENAI_REALTIME_MODEL`.
+`MCP_SERVER_URL` is used for fetching external tools (for example `http://localhost:3000`). `OPENAI_REALTIME_MODEL` defaults to `gpt-4o-realtime-preview-2024-12-17`.
 
 Install your dependencies
 
@@ -48,7 +48,7 @@ gcloud run deploy tool-calls \
   --image gcr.io/PROJECT_ID/tool-calls \
   --platform managed \
   --region us-central1 \
-  --set-env-vars OPENAI_API_KEY=YOUR_OPENAI_KEY
+  --set-env-vars OPENAI_API_KEY=YOUR_OPENAI_KEY,OPENAI_REALTIME_MODEL=gpt-4o-realtime-preview-2024-12-17
 ```
 
-Replace `PROJECT_ID` with your Google Cloud project ID and provide your `OPENAI_API_KEY`.
+Replace `PROJECT_ID` with your Google Cloud project ID and provide your `OPENAI_API_KEY`. `OPENAI_REALTIME_MODEL` can be used to select a different model.
