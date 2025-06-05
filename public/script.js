@@ -1,7 +1,5 @@
 const hand = new Hand();
 const messagesContainer = document.getElementById('messages');
-
-let recognition;
 let toolsList = [];
 let peerConnection;
 let dataChannel;
@@ -90,64 +88,6 @@ const TOOL_DESCRIPTORS = [
 	},
 ];
 
-function handleVoiceCommand(text) {
-	const lower = text.toLowerCase().trim();
-	addMessage('user', text);
-	if (lower.startsWith('change background color to ')) {
-		const color = lower.replace('change background color to ', '');
-		fns.changeBackgroundColor({ color });
-		return;
-	}
-	if (lower.startsWith('change text color to ')) {
-		const color = lower.replace('change text color to ', '');
-		fns.changeTextColor({ color });
-		return;
-	}
-	if (lower.startsWith('show fingers ')) {
-		const num = parseInt(lower.replace('show fingers ', ''), 10);
-		if (!isNaN(num)) fns.showFingers({ numberOfFingers: num });
-		return;
-	}
-	if (fns[lower]) {
-		fns[lower]({});
-		return;
-	}
-	const tool = toolsList.find((t) => t.name.toLowerCase() === lower);
-	if (tool) {
-		fetch(`/tools/${tool.name}`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({}),
-		});
-	}
-}
-
-function startVoice() {
-	const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-	if (!SpeechRecognition) {
-		alert('Speech recognition not supported');
-		return;
-	}
-	recognition = new SpeechRecognition();
-	recognition.continuous = true;
-	recognition.interimResults = false;
-	recognition.onresult = (e) => {
-		const transcript = Array.from(e.results)
-			.map((r) => r[0].transcript)
-			.join(' ');
-		handleVoiceCommand(transcript);
-	};
-	recognition.start();
-	document.getElementById('start-voice').disabled = true;
-	document.getElementById('stop-voice').disabled = false;
-}
-
-function stopVoice() {
-	if (recognition) recognition.stop();
-	stopRealtime();
-	document.getElementById('start-voice').disabled = false;
-	document.getElementById('stop-voice').disabled = true;
-}
 
 async function loadTools() {
 	const res = await fetch('/tools');
@@ -287,8 +227,5 @@ function stopRealtime() {
 	mediaStream = undefined;
 }
 
-document.getElementById('start-voice').addEventListener('click', () => {
-	startVoice();
-	startRealtime();
-});
-document.getElementById('stop-voice').addEventListener('click', stopVoice);
+document.getElementById('start-voice').addEventListener('click', startRealtime);
+document.getElementById('stop-voice').addEventListener('click', stopRealtime);
