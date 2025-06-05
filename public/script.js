@@ -1,4 +1,13 @@
 const hand = new Hand();
+const messagesContainer = document.getElementById('messages');
+
+function addMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = `message ${role}`;
+        div.textContent = text;
+        messagesContainer.appendChild(div);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
 
 function talkToTheHand() {
 	hand
@@ -109,9 +118,17 @@ dataChannel.addEventListener('open', (ev) => {
 // }
 
 dataChannel.addEventListener('message', async (ev) => {
-	const msg = JSON.parse(ev.data);
-	// Handle function calls
-	if (msg.type === 'response.function_call_arguments.done') {
+        const msg = JSON.parse(ev.data);
+        if (msg.type && msg.type.startsWith('transcript')) {
+                const text = msg.transcript || msg.text;
+                if (text) addMessage('user', text);
+        }
+        if (msg.type && msg.type.startsWith('response')) {
+                const text = msg.text || msg.delta;
+                if (text) addMessage('assistant', text);
+        }
+        // Handle function calls
+        if (msg.type === 'response.function_call_arguments.done') {
 		const fn = fns[msg.name];
 		if (fn !== undefined) {
 			console.log(`Calling local function ${msg.name} with ${msg.arguments}`);
