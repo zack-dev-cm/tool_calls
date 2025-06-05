@@ -3,4 +3,5 @@
 interface Env {
         OPENAI_API_KEY: string;
         MCP_SERVER_URL: string;
+        OPENAI_REALTIME_MODEL: string;
 }

@@ -18,6 +18,8 @@ app.get('/session', async (c) => {
         } catch (err) {
                 console.warn('Unable to fetch tools:', err);
         }
+        const model =
+                c.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2024-12-17';
         const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
                 method: 'POST',
                 headers: {
@@ -25,7 +27,7 @@ app.get('/session', async (c) => {
                         'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                        model: 'gpt-4o-realtime-preview-2024-12-17',
+                        model,
                         instructions: DEFAULT_INSTRUCTIONS,
                         voice: 'ash',
                 }),

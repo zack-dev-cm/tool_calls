@@ -185,7 +185,7 @@ async function startRealtime() {
         const data = await tokenResponse.json();
         const EPHEMERAL_KEY = data.result.client_secret.value;
         const baseUrl = 'https://api.openai.com/v1/realtime';
-        const model = 'gpt-4o-realtime-preview-2024-12-17';
+        const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2024-12-17';
         const r = await fetch(`${baseUrl}?model=${model}`, {
                 method: 'POST',
                 body: offer.sdp,
