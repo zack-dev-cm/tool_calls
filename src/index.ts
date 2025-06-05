@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { fetchTools, triggerTool } from './mcp';
+import { fetchTools, triggerTool, ToolDefinition } from './mcp';
 
 const app = new Hono<{ Bindings: Env }>();
 app.use(cors());
@@ -12,7 +12,12 @@ In the tools you have the ability to control a robot hand.
 
 // Learn more: https://platform.openai.com/docs/api-reference/realtime-sessions/create
 app.get('/session', async (c) => {
-        const tools = await fetchTools(c.env.MCP_SERVER_URL);
+        let tools: ToolDefinition[] = [];
+        try {
+                tools = await fetchTools(c.env.MCP_SERVER_URL);
+        } catch (err) {
+                console.warn('Unable to fetch tools:', err);
+        }
         const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
                 method: 'POST',
                 headers: {
@@ -30,8 +35,13 @@ app.get('/session', async (c) => {
 });
 
 app.get('/tools', async (c) => {
-        const tools = await fetchTools(c.env.MCP_SERVER_URL);
-        return c.json({ tools });
+        try {
+                const tools = await fetchTools(c.env.MCP_SERVER_URL);
+                return c.json({ tools });
+        } catch (err) {
+                console.warn('Unable to fetch tools:', err);
+                return c.json({ tools: [] });
+        }
 });
 
 app.post('/tools/:name', async (c) => {
