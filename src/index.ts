@@ -19,7 +19,7 @@ app.get('/session', async (c) => {
                 console.warn('Unable to fetch tools:', err);
         }
         const model =
-                c.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2024-12-17';
+                c.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
         const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
                 method: 'POST',
                 headers: {
