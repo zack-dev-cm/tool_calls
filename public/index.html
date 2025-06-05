@@ -1,21 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Just a website</title>
-	<link rel="stylesheet" href="/styles.css">
-	<script src="/hand.js"></script>
-	<script src="/script.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Robot Hand Chat</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
-	<div class="content">
-		<h1>This is a plain old website</h1>
-		<p>This is just a plain website that is using plain old JavaScript</p>
-		<button onclick="talkToTheHand()">Talk to the hand</button>
-	</div>
-	<footer>
-		<p>Built with 🧡 on <a href="https://developers.cloudflare.com">Cloudflare Workers</a> and the <a href="https://platform.openai.com/docs/api-reference/realtime">OpenAI Realtime API</a></p>
-	</footer>
+<body class="grey lighten-4">
+  <nav>
+    <div class="nav-wrapper teal">
+      <a href="#" class="brand-logo center">Robot Hand Chat</a>
+    </div>
+  </nav>
+
+  <div class="container content">
+    <div id="chat" class="chat-container">
+      <div class="bubble bot">This is a plain old website</div>
+      <div class="bubble bot">This is just a plain website that is using plain old JavaScript</div>
+    </div>
+
+    <div class="row">
+      <div class="input-field col s10">
+        <input id="user-input" type="text">
+        <label for="user-input">Say something…</label>
+      </div>
+      <div class="col s2">
+        <button onclick="talkToTheHand()" class="btn waves-effect waves-light">Talk to the hand</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="page-footer teal">
+    <div class="container">
+      <p>Built with 🤌 on <a href="https://developers.cloudflare.com" class="white-text">Cloudflare Workers</a> and the <a href="https://platform.openai.com/docs/api-reference/realtime" class="white-text">OpenAI Realtime API</a></p>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="/hand.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>
