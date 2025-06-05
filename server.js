@@ -4,6 +4,8 @@ import { config } from 'dotenv';
 
 config({ path: '.dev.vars', override: true });
 
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:3000';
+
 const DEFAULT_INSTRUCTIONS = `You are helpful and have some tools installed.
 
 In the tools you have the ability to control a robot hand.
@@ -14,7 +16,7 @@ app.use(cors());
 
 app.get('/session', async (req, res) => {
   try {
-    const toolsRes = await fetch(`${process.env.MCP_SERVER_URL}/v1/tool`);
+    const toolsRes = await fetch(`${MCP_SERVER_URL}/v1/tool`);
     const toolsData = await toolsRes.json();
     const tools = Array.isArray(toolsData)
       ? toolsData
@@ -41,7 +43,7 @@ app.get('/session', async (req, res) => {
 
 app.get('/tools', async (req, res) => {
   try {
-    const response = await fetch(`${process.env.MCP_SERVER_URL}/v1/tool`);
+    const response = await fetch(`${MCP_SERVER_URL}/v1/tool`);
     const data = await response.json();
     const tools = Array.isArray(data) ? data : data.tools ?? data.data ?? [];
     res.json({ tools });
@@ -55,7 +57,7 @@ app.post('/tools/:name', express.json(), async (req, res) => {
   try {
     const { name } = req.params;
     const response = await fetch(
-      `${process.env.MCP_SERVER_URL}/v1/tool/${encodeURIComponent(name)}/invoke`,
+      `${MCP_SERVER_URL}/v1/tool/${encodeURIComponent(name)}/invoke`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
