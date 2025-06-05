@@ -54,7 +54,7 @@ describe('Hello World worker', () => {
 			    </div>
 			  </footer>
 			  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-			  <script>window.REALTIME_MODEL="gpt-4o-realtime-preview-2024-12-17"</script>
+			  <script>window.REALTIME_MODEL="gpt-4o-realtime-preview-2025-06-03"</script>
 			  <script src="/hand.js"></script>
 			  <script src="/script.js"></script>
 			</body>
