@@ -4,6 +4,7 @@ import { config } from 'dotenv';
 
 config({ path: '.dev.vars', override: true });
 
+const MCP_ENABLED = process.env.MCP_ENABLED !== 'false';
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:3000';
 const AUTH_TOKEN = process.env.AUTH_TOKEN || '';
 
@@ -28,14 +29,16 @@ app.use('/tools', auth);
 
 app.get('/session', async (req, res) => {
   let tools = [];
-  try {
-    const toolsRes = await fetch(`${MCP_SERVER_URL}/v1/tool`);
-    const toolsData = await toolsRes.json();
-    tools = Array.isArray(toolsData)
-      ? toolsData
-      : toolsData.tools ?? toolsData.data ?? [];
-  } catch (err) {
-    console.warn('Unable to fetch tools:', err);
+  if (MCP_ENABLED) {
+    try {
+      const toolsRes = await fetch(`${MCP_SERVER_URL}/v1/tool`);
+      const toolsData = await toolsRes.json();
+      tools = Array.isArray(toolsData)
+        ? toolsData
+        : toolsData.tools ?? toolsData.data ?? [];
+    } catch (err) {
+      console.warn('Unable to fetch tools:', err);
+    }
   }
 
   try {
@@ -59,6 +62,9 @@ app.get('/session', async (req, res) => {
 });
 
 app.get('/tools', async (req, res) => {
+  if (!MCP_ENABLED) {
+    return res.json({ tools: [] });
+  }
   try {
     const response = await fetch(`${MCP_SERVER_URL}/v1/tool`);
     const data = await response.json();
@@ -71,6 +77,9 @@ app.get('/tools', async (req, res) => {
 });
 
 app.post('/tools/:name', express.json(), async (req, res) => {
+  if (!MCP_ENABLED) {
+    return res.status(400).json({ error: 'MCP disabled' });
+  }
   try {
     const { name } = req.params;
     const response = await fetch(
