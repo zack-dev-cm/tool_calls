@@ -1,3 +1,4 @@
+# Used for realtime sessions and TTS
 OPENAI_API_KEY="YOUR-API-KEY"
 
 MCP_SERVER_URL="http://localhost:3000"
