@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from 'dotenv';
+// Node 18+ includes a global `fetch` implementation which we rely on
 
 config({ path: '.dev.vars', override: true });
 
@@ -115,6 +116,55 @@ app.post('/tools/:name', express.json(), async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to trigger tool' });
+  }
+});
+
+app.post('/api/generate-speech', auth, express.json(), async (req, res) => {
+  const { text, voice_details, voice: requestedVoice } = req.body || {};
+
+  if (!text) {
+    return res.status(400).json({ error: 'Missing text to read' });
+  }
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY is not set');
+    return res
+      .status(500)
+      .json({ error: 'Server misconfiguration: missing OpenAI key' });
+  }
+
+  const openaiVoice = requestedVoice || 'fable';
+  const inputText = voice_details ? `${voice_details}. ${text}` : text;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        input: inputText,
+        voice: openaiVoice,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI TTS error', response.status, errorText);
+      return res
+        .status(response.status)
+        .json({ error: 'Failed to generate speech', details: errorText });
+    }
+
+    res.setHeader(
+      'Content-Type',
+      response.headers.get('content-type') || 'audio/mpeg',
+    );
+    response.body.pipe(res);
+  } catch (err) {
+    console.error('Error calling TTS API:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
