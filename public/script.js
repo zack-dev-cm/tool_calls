@@ -5,7 +5,16 @@ let peerConnection;
 let dataChannel;
 let mediaStream;
 let currentAssistantEl;
+let availableTools = [];
 const VOICES = ['nova', 'onyx', 'alloy', 'echo', 'fable', 'shimmer'];
+
+function showNotification(message, success = true) {
+       if (window.M && M.toast) {
+               M.toast({ html: message, classes: success ? 'green' : 'red' });
+       } else {
+               alert(message);
+       }
+}
 
 function addMessage(role, text, returnElement = false) {
 	const div = document.createElement('div');
@@ -17,28 +26,41 @@ function addMessage(role, text, returnElement = false) {
 }
 
 function talkToTheHand() {
-	hand
-		.connect()
-		.then(() => console.log('Hand is ready'))
-		.catch((err) => console.error(err));
+       hand
+               .connect()
+               .then((ok) => {
+                       if (ok) {
+                               console.log('Hand is ready');
+                               showNotification('Hand connected', true);
+                       } else {
+                               showNotification('Failed to connect to hand', false);
+                       }
+               })
+               .catch((err) => {
+                       console.error(err);
+                       showNotification('Failed to connect to hand', false);
+               });
 }
 
 const fns = {
 	getPageHTML: () => {
 		return { success: true, html: document.documentElement.outerHTML };
 	},
-	changeBackgroundColor: ({ color }) => {
-		document.body.style.backgroundColor = color;
-		return { success: true, color };
-	},
-	changeTextColor: ({ color }) => {
-		document.body.style.color = color;
-		return { success: true, color };
-	},
-	showFingers: async ({ numberOfFingers }) => {
-		await hand.sendCommand(numberOfFingers);
-		return { success: true, numberOfFingers };
-	},
+       changeBackgroundColor: ({ color }) => {
+               document.body.style.backgroundColor = color;
+               showNotification(`Background color changed to ${color}`);
+               return { success: true, color };
+       },
+       changeTextColor: ({ color }) => {
+               document.body.style.color = color;
+               showNotification(`Text color changed to ${color}`);
+               return { success: true, color };
+       },
+       showFingers: async ({ numberOfFingers }) => {
+               const ok = await hand.sendCommand(numberOfFingers);
+               showNotification(ok ? `Showing ${numberOfFingers} fingers` : 'Failed to control hand', ok);
+               return { success: ok, numberOfFingers };
+       },
 };
 
 const TOOL_DESCRIPTORS = [
@@ -92,31 +114,35 @@ const TOOL_DESCRIPTORS = [
 ];
 
 async function loadTools() {
-	const res = await fetch('/tools');
-	const data = await res.json();
-	toolsList = data.tools || [];
-	return toolsList;
+       const res = await fetch('/tools');
+       const data = await res.json();
+       toolsList = data.tools || [];
+       availableTools = toolsList.concat(TOOL_DESCRIPTORS);
+       return availableTools;
 }
 
 async function configureData() {
-	console.log('Configuring data channel');
-	const tools = await loadTools();
-	const allTools = tools.concat(TOOL_DESCRIPTORS);
-	const voiceSelect = document.getElementById('voice-select');
-	const voice = voiceSelect ? voiceSelect.value : 'nova';
-	const event = {
-		type: 'session.update',
-		session: {
-			modalities: ['text', 'audio'],
-			voice,
-			tools: allTools,
-		},
-	};
-	const includesAll = TOOL_DESCRIPTORS.every((t) => allTools.some((tool) => tool.name === t.name));
-	if (!includesAll) {
-		console.error('Missing local tools in session.update', event);
-	}
-	dataChannel.send(JSON.stringify(event));
+       console.log('Configuring data channel');
+       await loadTools();
+       const selected = availableTools.filter((t) => {
+               const cb = document.querySelector(`input.tool-checkbox[data-tool-name="${t.name}"]`);
+               return !cb || cb.checked;
+       });
+       const voiceSelect = document.getElementById('voice-select');
+       const voice = voiceSelect ? voiceSelect.value : 'nova';
+       const event = {
+               type: 'session.update',
+               session: {
+                       modalities: ['text', 'audio'],
+                       voice,
+                       tools: selected,
+               },
+       };
+       const includesAll = TOOL_DESCRIPTORS.every((t) => selected.some((tool) => tool.name === t.name));
+       if (!includesAll) {
+               console.error('Missing local tools in session.update', event);
+       }
+       dataChannel.send(JSON.stringify(event));
 }
 
 function sendInstructions() {
@@ -186,18 +212,19 @@ function setupPeerConnection() {
 			const fn = fns[msg.name];
 			let result;
 			const args = JSON.parse(msg.arguments);
-			if (fn !== undefined) {
-				console.log(`Calling local function ${msg.name} with ${msg.arguments}`);
-				result = await fn(args);
-			} else {
-				const resp = await fetch(`/tools/${msg.name}`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(args),
-				});
-				result = await resp.json();
-			}
-			console.log('result', result);
+                       if (fn !== undefined) {
+                               console.log(`Calling local function ${msg.name} with ${msg.arguments}`);
+                               result = await fn(args);
+                       } else {
+                               const resp = await fetch(`/tools/${msg.name}`, {
+                                       method: 'POST',
+                                       headers: { 'Content-Type': 'application/json' },
+                                       body: JSON.stringify(args),
+                               });
+                               result = await resp.json();
+                               showNotification(`Tool ${msg.name} executed`, resp.ok);
+                       }
+                       console.log('result', result);
 			const event = {
 				type: 'conversation.item.create',
 				item: {
@@ -219,14 +246,20 @@ async function startRealtime() {
 		mediaStream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
 		const offer = await peerConnection.createOffer();
 		await peerConnection.setLocalDescription(offer);
-		const tokenResponse = await fetch('/session');
-		console.log('Session status', tokenResponse.status);
-		if (!tokenResponse.ok) {
-			const body = await tokenResponse.text();
-			console.error('Session error body', body);
-			alert('Failed to start session. Please try again.');
-			throw new Error('Session request failed');
-		}
+               const instructionsInput = document.getElementById('instructions-input');
+               const instructions = instructionsInput ? instructionsInput.value : '';
+               const tokenResponse = await fetch('/session', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({ instructions }),
+               });
+               console.log('Session status', tokenResponse.status);
+               if (!tokenResponse.ok) {
+                       const body = await tokenResponse.text();
+                       console.error('Session error body', body);
+                       showNotification('Failed to start session', false);
+                       throw new Error('Session request failed');
+               }
 		const data = await tokenResponse.json();
 		const EPHEMERAL_KEY = data.result.client_secret.value;
 		const baseUrl = 'https://api.openai.com/v1/realtime';
@@ -241,22 +274,24 @@ async function startRealtime() {
 				'Content-Type': 'application/sdp',
 			},
 		});
-		console.log('OpenAI status', r.status);
-		if (!r.ok) {
-			const body = await r.text();
-			console.error('OpenAI error body', body);
-			alert('Failed to connect to OpenAI. Please try again.');
-			throw new Error('OpenAI connection failed');
-		}
+               console.log('OpenAI status', r.status);
+               if (!r.ok) {
+                       const body = await r.text();
+                       console.error('OpenAI error body', body);
+                       showNotification('Failed to connect to OpenAI', false);
+                       throw new Error('OpenAI connection failed');
+               }
 		const answer = await r.text();
-		await peerConnection.setRemoteDescription({
-			sdp: answer,
-			type: 'answer',
-		});
-	} catch (err) {
-		console.error(err);
-		stopRealtime();
-	}
+               await peerConnection.setRemoteDescription({
+                       sdp: answer,
+                       type: 'answer',
+               });
+               showNotification('Realtime session started', true);
+       } catch (err) {
+               console.error(err);
+               showNotification('Error starting session', false);
+               stopRealtime();
+       }
 }
 
 function stopRealtime() {
@@ -284,30 +319,49 @@ document.addEventListener('DOMContentLoaded', async () => {
 			voiceSelect.appendChild(opt);
 		});
 	}
-	const tools = await loadTools();
-	const list = document.getElementById('tools-list');
-	if (list) {
-		list.innerHTML = '';
-		tools.forEach((tool) => {
-			const li = document.createElement('li');
-			const button = document.createElement('button');
-			button.textContent = tool.name;
-			button.className = 'btn waves-effect waves-light tool-button';
-			button.addEventListener('click', async () => {
-				try {
-					const resp = await fetch(`/tools/${tool.name}`, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({}),
-					});
-					const data = await resp.json();
-					console.log('Tool result', data);
-				} catch (err) {
-					console.error('Failed to invoke tool', err);
-				}
-			});
-			li.appendChild(button);
-			list.appendChild(li);
-		});
-	}
+       const tools = await loadTools();
+       const list = document.getElementById('tools-list');
+       if (list) {
+               list.innerHTML = '';
+               tools.forEach((tool) => {
+                       const li = document.createElement('li');
+                       const label = document.createElement('label');
+                       const checkbox = document.createElement('input');
+                       checkbox.type = 'checkbox';
+                       checkbox.className = 'filled-in tool-checkbox';
+                       checkbox.checked = true;
+                       checkbox.dataset.toolName = tool.name;
+                       const span = document.createElement('span');
+                       span.textContent = tool.name;
+                       label.appendChild(checkbox);
+                       label.appendChild(span);
+                       li.appendChild(label);
+
+                       const button = document.createElement('button');
+                       button.textContent = 'Run';
+                       button.className = 'btn waves-effect waves-light tool-button';
+                       button.addEventListener('click', async () => {
+                               try {
+                                       if (fns[tool.name]) {
+                                               const result = await fns[tool.name]({});
+                                               showNotification(`Tool ${tool.name} executed`, result.success !== false);
+                                       } else {
+                                               const resp = await fetch(`/tools/${tool.name}`, {
+                                                       method: 'POST',
+                                                       headers: { 'Content-Type': 'application/json' },
+                                                       body: JSON.stringify({}),
+                                               });
+                                               const data = await resp.json();
+                                               showNotification(`Tool ${tool.name} executed`, resp.ok);
+                                               console.log('Tool result', data);
+                                       }
+                               } catch (err) {
+                                       console.error('Failed to invoke tool', err);
+                                       showNotification(`Tool ${tool.name} failed`, false);
+                               }
+                       });
+                       li.appendChild(button);
+                       list.appendChild(li);
+               });
+       }
 });
