@@ -5,14 +5,15 @@ let peerConnection;
 let dataChannel;
 let mediaStream;
 let currentAssistantEl;
+const VOICES = ['nova', 'onyx', 'alloy', 'echo', 'fable', 'shimmer'];
 
 function addMessage(role, text, returnElement = false) {
-        const div = document.createElement('div');
-        div.className = `message ${role}`;
-        div.textContent = text;
-        messagesContainer.appendChild(div);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        if (returnElement) return div;
+	const div = document.createElement('div');
+	div.className = `message ${role}`;
+	div.textContent = text;
+	messagesContainer.appendChild(div);
+	messagesContainer.scrollTop = messagesContainer.scrollHeight;
+	if (returnElement) return div;
 }
 
 function talkToTheHand() {
@@ -90,7 +91,6 @@ const TOOL_DESCRIPTORS = [
 	},
 ];
 
-
 async function loadTools() {
 	const res = await fetch('/tools');
 	const data = await res.json();
@@ -99,33 +99,48 @@ async function loadTools() {
 }
 
 async function configureData() {
-        console.log('Configuring data channel');
-        const tools = await loadTools();
-        const allTools = tools.concat(TOOL_DESCRIPTORS);
-        const event = {
-                type: 'session.update',
-                session: {
-                        modalities: ['text', 'audio'],
-                        tools: allTools,
-                },
-        };
-        const includesAll = TOOL_DESCRIPTORS.every((t) => allTools.some((tool) => tool.name === t.name));
-        if (!includesAll) {
-                console.error('Missing local tools in session.update', event);
-        }
-        dataChannel.send(JSON.stringify(event));
+	console.log('Configuring data channel');
+	const tools = await loadTools();
+	const allTools = tools.concat(TOOL_DESCRIPTORS);
+	const voiceSelect = document.getElementById('voice-select');
+	const voice = voiceSelect ? voiceSelect.value : 'nova';
+	const event = {
+		type: 'session.update',
+		session: {
+			modalities: ['text', 'audio'],
+			voice,
+			tools: allTools,
+		},
+	};
+	const includesAll = TOOL_DESCRIPTORS.every((t) => allTools.some((tool) => tool.name === t.name));
+	if (!includesAll) {
+		console.error('Missing local tools in session.update', event);
+	}
+	dataChannel.send(JSON.stringify(event));
 }
 
 function sendInstructions() {
-        const input = document.getElementById('instructions-input');
-        if (!input || !dataChannel || dataChannel.readyState !== 'open') return;
-        const event = {
-                type: 'session.update',
-                session: {
-                        instructions: input.value,
-                },
-        };
-        dataChannel.send(JSON.stringify(event));
+	const input = document.getElementById('instructions-input');
+	if (!input || !dataChannel || dataChannel.readyState !== 'open') return;
+	const event = {
+		type: 'session.update',
+		session: {
+			instructions: input.value,
+		},
+	};
+	dataChannel.send(JSON.stringify(event));
+}
+
+function sendVoice() {
+	const select = document.getElementById('voice-select');
+	if (!select || !dataChannel || dataChannel.readyState !== 'open') return;
+	const event = {
+		type: 'session.update',
+		session: {
+			voice: select.value,
+		},
+	};
+	dataChannel.send(JSON.stringify(event));
 }
 
 function setupPeerConnection() {
@@ -138,36 +153,36 @@ function setupPeerConnection() {
 		document.body.appendChild(el);
 	};
 
-        dataChannel = peerConnection.createDataChannel('oai-events');
-        dataChannel.addEventListener('open', (ev) => {
-                console.log('Opening data channel', ev);
-                configureData();
-                sendInstructions();
-        });
+	dataChannel = peerConnection.createDataChannel('oai-events');
+	dataChannel.addEventListener('open', (ev) => {
+		console.log('Opening data channel', ev);
+		configureData();
+		sendInstructions();
+	});
 
-        dataChannel.addEventListener('message', async (ev) => {
-                const msg = JSON.parse(ev.data);
-                if (msg.type && msg.type.startsWith('transcript')) {
-                        const text = msg.transcript || msg.text;
-                        if (text) addMessage('user', text);
-                }
-                if (msg.type === 'response.text.delta') {
-                        const text = msg.delta || msg.text;
-                        if (text) {
-                                if (!currentAssistantEl) {
-                                        currentAssistantEl = addMessage('assistant', text, true);
-                                } else {
-                                        currentAssistantEl.textContent += text;
-                                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                                }
-                        }
-                } else if (msg.type === 'response.text.done' || msg.type === 'response.done') {
-                        currentAssistantEl = undefined;
-                } else if (msg.type && msg.type.startsWith('response')) {
-                        const text = msg.text || msg.delta;
-                        if (text) addMessage('assistant', text);
-                }
-                if (msg.type === 'response.function_call_arguments.done') {
+	dataChannel.addEventListener('message', async (ev) => {
+		const msg = JSON.parse(ev.data);
+		if (msg.type && msg.type.startsWith('transcript')) {
+			const text = msg.transcript || msg.text;
+			if (text) addMessage('user', text);
+		}
+		if (msg.type === 'response.text.delta') {
+			const text = msg.delta || msg.text;
+			if (text) {
+				if (!currentAssistantEl) {
+					currentAssistantEl = addMessage('assistant', text, true);
+				} else {
+					currentAssistantEl.textContent += text;
+					messagesContainer.scrollTop = messagesContainer.scrollHeight;
+				}
+			}
+		} else if (msg.type === 'response.text.done' || msg.type === 'response.done') {
+			currentAssistantEl = undefined;
+		} else if (msg.type && msg.type.startsWith('response')) {
+			const text = msg.text || msg.delta;
+			if (text) addMessage('assistant', text);
+		}
+		if (msg.type === 'response.function_call_arguments.done') {
 			const fn = fns[msg.name];
 			let result;
 			const args = JSON.parse(msg.arguments);
@@ -198,51 +213,50 @@ function setupPeerConnection() {
 }
 
 async function startRealtime() {
-        try {
-                setupPeerConnection();
-                mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaStream.getTracks().forEach((track) =>
-                        peerConnection.addTransceiver(track, { direction: 'sendrecv' })
-                );
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-                const tokenResponse = await fetch('/session');
-                console.log('Session status', tokenResponse.status);
-                if (!tokenResponse.ok) {
-                        const body = await tokenResponse.text();
-                        console.error('Session error body', body);
-                        alert('Failed to start session. Please try again.');
-                        throw new Error('Session request failed');
-                }
-                const data = await tokenResponse.json();
-                const EPHEMERAL_KEY = data.result.client_secret.value;
-                const baseUrl = 'https://api.openai.com/v1/realtime';
-                const model =
-                        window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
-                const r = await fetch(`${baseUrl}?model=${model}`, {
-                        method: 'POST',
-                        body: offer.sdp,
-                        headers: {
-                                Authorization: `Bearer ${EPHEMERAL_KEY}`,
-                                'Content-Type': 'application/sdp',
-                        },
-                });
-                console.log('OpenAI status', r.status);
-                if (!r.ok) {
-                        const body = await r.text();
-                        console.error('OpenAI error body', body);
-                        alert('Failed to connect to OpenAI. Please try again.');
-                        throw new Error('OpenAI connection failed');
-                }
-                const answer = await r.text();
-                await peerConnection.setRemoteDescription({
-                        sdp: answer,
-                        type: 'answer',
-                });
-        } catch (err) {
-                console.error(err);
-                stopRealtime();
-        }
+	try {
+		setupPeerConnection();
+		mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		mediaStream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
+		const offer = await peerConnection.createOffer();
+		await peerConnection.setLocalDescription(offer);
+		const tokenResponse = await fetch('/session');
+		console.log('Session status', tokenResponse.status);
+		if (!tokenResponse.ok) {
+			const body = await tokenResponse.text();
+			console.error('Session error body', body);
+			alert('Failed to start session. Please try again.');
+			throw new Error('Session request failed');
+		}
+		const data = await tokenResponse.json();
+		const EPHEMERAL_KEY = data.result.client_secret.value;
+		const baseUrl = 'https://api.openai.com/v1/realtime';
+		const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
+		const voiceSelect = document.getElementById('voice-select');
+		const voice = voiceSelect ? voiceSelect.value : 'nova';
+		const r = await fetch(`${baseUrl}?model=${model}&voice=${voice}`, {
+			method: 'POST',
+			body: offer.sdp,
+			headers: {
+				Authorization: `Bearer ${EPHEMERAL_KEY}`,
+				'Content-Type': 'application/sdp',
+			},
+		});
+		console.log('OpenAI status', r.status);
+		if (!r.ok) {
+			const body = await r.text();
+			console.error('OpenAI error body', body);
+			alert('Failed to connect to OpenAI. Please try again.');
+			throw new Error('OpenAI connection failed');
+		}
+		const answer = await r.text();
+		await peerConnection.setRemoteDescription({
+			sdp: answer,
+			type: 'answer',
+		});
+	} catch (err) {
+		console.error(err);
+		stopRealtime();
+	}
 }
 
 function stopRealtime() {
@@ -257,32 +271,43 @@ function stopRealtime() {
 document.getElementById('start-voice').addEventListener('click', startRealtime);
 document.getElementById('stop-voice').addEventListener('click', stopRealtime);
 document.getElementById('set-instructions').addEventListener('click', sendInstructions);
+document.getElementById('voice-select').addEventListener('change', sendVoice);
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const tools = await loadTools();
-    const list = document.getElementById('tools-list');
-    if (list) {
-        list.innerHTML = '';
-        tools.forEach((tool) => {
-            const li = document.createElement('li');
-            const button = document.createElement('button');
-            button.textContent = tool.name;
-            button.className = 'btn waves-effect waves-light tool-button';
-            button.addEventListener('click', async () => {
-                try {
-                    const resp = await fetch(`/tools/${tool.name}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({}),
-                    });
-                    const data = await resp.json();
-                    console.log('Tool result', data);
-                } catch (err) {
-                    console.error('Failed to invoke tool', err);
-                }
-            });
-            li.appendChild(button);
-            list.appendChild(li);
-        });
-    }
+	const voiceSelect = document.getElementById('voice-select');
+	if (voiceSelect) {
+		voiceSelect.innerHTML = '';
+		VOICES.forEach((v) => {
+			const opt = document.createElement('option');
+			opt.value = v;
+			opt.textContent = v;
+			voiceSelect.appendChild(opt);
+		});
+	}
+	const tools = await loadTools();
+	const list = document.getElementById('tools-list');
+	if (list) {
+		list.innerHTML = '';
+		tools.forEach((tool) => {
+			const li = document.createElement('li');
+			const button = document.createElement('button');
+			button.textContent = tool.name;
+			button.className = 'btn waves-effect waves-light tool-button';
+			button.addEventListener('click', async () => {
+				try {
+					const resp = await fetch(`/tools/${tool.name}`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({}),
+					});
+					const data = await resp.json();
+					console.log('Tool result', data);
+				} catch (err) {
+					console.error('Failed to invoke tool', err);
+				}
+			});
+			li.appendChild(button);
+			list.appendChild(li);
+		});
+	}
 });

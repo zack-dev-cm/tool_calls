@@ -3,9 +3,9 @@
 This project is a [Cloudflare Workers](https://developers.cloudflare.com) app using [Hono](https://honojs.dev) to relay the [OpenAI Realtime API](https://platform.openai.com/docs/api-reference/realtime) over WebRTC. The main files are just [static assets](https://developers.cloudflare.com/workers/static-assets/).
 
 The default model is `gpt-4o-realtime-preview-2025-06-03`, and the application now relies solely on the OpenAI Realtime API for both speech recognition and speech synthesis.
+You can choose the synthesis voice from a dropdown in the UI.
 
-[<img src="https://img.youtube.com/vi/TcOytsfva0o/0.jpg">](https://youtu.be/TcOytsfva0o "Client Side Tool Calling with the OpenAI WebRTC Realtime API")
-
+[<img src="https://img.youtube.com/vi/TcOytsfva0o/0.jpg">](https://youtu.be/TcOytsfva0o 'Client Side Tool Calling with the OpenAI WebRTC Realtime API')
 
 ## Develop
 
