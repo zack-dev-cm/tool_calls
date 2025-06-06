@@ -25,18 +25,25 @@
 			<div class="section main-controls">
 				<button id="start-voice" class="btn waves-effect waves-light green">Start Voice</button>
 				<button id="stop-voice" class="btn waves-effect waves-light red" disabled>Stop Voice</button>
-				<div class="voice-select">
-					<label for="voice-select">Voice</label>
-					<select id="voice-select" class="browser-default">
+                                <div class="voice-select">
+                                        <label for="voice-select">Voice</label>
+                                        <select id="voice-select" class="browser-default">
 						<option value="nova">nova</option>
 						<option value="onyx">onyx</option>
 						<option value="alloy">alloy</option>
 						<option value="echo">echo</option>
 						<option value="fable">fable</option>
 						<option value="shimmer">shimmer</option>
-					</select>
-				</div>
-				<div class="instructions-input">
+                                        </select>
+                                </div>
+                                <div class="model-select">
+                                        <label for="model-select">Model</label>
+                                        <select id="model-select" class="browser-default">
+                                                <option value="gpt-4o-realtime-preview-2025-06-03">latest</option>
+                                                <option value="gpt-4o-realtime-preview-2024-12-17">legacy</option>
+                                        </select>
+                                </div>
+                                <div class="instructions-input">
 					<input id="instructions-input" type="text" placeholder="Session instructions" />
 					<button id="set-instructions" class="btn waves-effect waves-light">Set Instructions</button>
 				</div>

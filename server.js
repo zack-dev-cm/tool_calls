@@ -4,7 +4,7 @@ import { config } from 'dotenv';
 
 config({ path: '.dev.vars', override: true });
 
-const MCP_ENABLED = process.env.MCP_ENABLED !== 'false';
+const MCP_ENABLED = process.env.MCP_ENABLED === 'true';
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:3000';
 const AUTH_TOKEN = process.env.AUTH_TOKEN || '';
 
@@ -15,6 +15,7 @@ In the tools you have the ability to control a robot hand.
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 const auth = (req, res, next) => {
   if (!AUTH_TOKEN) return next();
   const header = req.get('Authorization') || '';
@@ -27,7 +28,21 @@ const auth = (req, res, next) => {
 app.use('/session', auth);
 app.use('/tools', auth);
 
-app.get('/session', async (req, res) => {
+async function createSession({ instructions = DEFAULT_INSTRUCTIONS, model = process.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03', voice } = {}) {
+  const body = { model, instructions };
+  if (voice) body.voice = voice;
+  const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  return response.json();
+}
+
+async function handleSession(req, res, opts = {}) {
   let tools = [];
   if (MCP_ENABLED) {
     try {
@@ -42,23 +57,21 @@ app.get('/session', async (req, res) => {
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-realtime-preview-2025-06-03',
-        instructions: DEFAULT_INSTRUCTIONS,
-      }),
-    });
-    const result = await response.json();
+    const result = await createSession(opts);
     res.json({ result, tools });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to create session' });
   }
+}
+
+app.get('/session', async (req, res) => {
+  handleSession(req, res, {});
+});
+
+app.post('/session', async (req, res) => {
+  const { instructions, model, voice } = req.body || {};
+  handleSession(req, res, { instructions, model, voice });
 });
 
 app.get('/tools', async (req, res) => {
