@@ -10,7 +10,8 @@ You can choose the synthesis voice from a dropdown in the UI.
 ## Develop
 
 Copy [.dev.vars.example](./.dev.vars.example) to `.dev.vars` and set `OPENAI_API_KEY`, `MCP_SERVER_URL`, and optionally `OPENAI_REALTIME_MODEL`.
-`MCP_SERVER_URL` is used for fetching external tools (for example `http://localhost:3000`). `OPENAI_REALTIME_MODEL` defaults to `gpt-4o-realtime-preview-2025-06-03`.
+`MCP_SERVER_URL` is used for fetching external tools (for example `http://localhost:3000`).
+Set `MCP_ENABLED=false` to disable MCP integration. `OPENAI_REALTIME_MODEL` defaults to `gpt-4o-realtime-preview-2025-06-03`.
 
 Install your dependencies
 
