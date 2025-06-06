@@ -265,7 +265,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         list.innerHTML = '';
         tools.forEach((tool) => {
             const li = document.createElement('li');
-            li.textContent = tool.name;
+            const button = document.createElement('button');
+            button.textContent = tool.name;
+            button.className = 'btn waves-effect waves-light tool-button';
+            button.addEventListener('click', async () => {
+                try {
+                    const resp = await fetch(`/tools/${tool.name}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({}),
+                    });
+                    const data = await resp.json();
+                    console.log('Tool result', data);
+                } catch (err) {
+                    console.error('Failed to invoke tool', err);
+                }
+            });
+            li.appendChild(button);
             list.appendChild(li);
         });
     }

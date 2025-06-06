@@ -18,6 +18,12 @@ Install your dependencies
 npm install
 ```
 
+Start the mock MCP server in a separate terminal to provide placeholder tools:
+
+```bash
+npm run mcp
+```
+
 Run local server
 
 ```bash

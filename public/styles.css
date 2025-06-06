@@ -54,9 +54,11 @@ body {
 }
 
 .tools-panel li {
-    padding: 8px;
-    border-radius: 4px;
     margin-bottom: 4px;
+}
+
+.tools-panel button.tool-button {
+    width: 100%;
     background-color: var(--md-primary-container);
     color: var(--md-on-primary-container);
 }
