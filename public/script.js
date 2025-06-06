@@ -6,7 +6,7 @@ let dataChannel;
 let mediaStream;
 let currentAssistantEl;
 let availableTools = [];
-const VOICES = ['nova', 'onyx', 'alloy', 'echo', 'fable', 'shimmer'];
+const VOICES = ['nova', 'onyx', 'alloy', 'echo', 'fable', 'shimmer', 'ash'];
 const MODELS = ['gpt-4o-realtime-preview-2025-06-03', 'gpt-4o-realtime-preview-2024-12-17'];
 const EXAMPLE_INSTRUCTIONS = `# Personality and Tone
 ## Identity
@@ -289,8 +289,15 @@ async function startRealtime() {
 			showNotification('Failed to start session', false);
 			throw new Error('Session request failed');
 		}
-		const data = await tokenResponse.json();
-		const EPHEMERAL_KEY = data.result.client_secret.value;
+                const data = await tokenResponse.json();
+                const ephemeralKey = data?.result?.client_secret?.value;
+                if (!ephemeralKey) {
+                        console.error('Invalid session response', data);
+                        const message = data?.result?.error?.message || 'Failed to start session';
+                        showNotification(message, false);
+                        throw new Error('Session response invalid');
+                }
+                const EPHEMERAL_KEY = ephemeralKey;
 		const baseUrl = 'https://api.openai.com/v1/realtime';
 		const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
 		const voice = voiceSelect ? voiceSelect.value : 'nova';
