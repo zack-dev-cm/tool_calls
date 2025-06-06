@@ -274,14 +274,15 @@ async function startRealtime() {
 		mediaStream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
 		const offer = await peerConnection.createOffer();
 		await peerConnection.setLocalDescription(offer);
-		const instructionsInput = document.getElementById('instructions-input');
-		const instructions = instructionsInput ? instructionsInput.value : '';
-		const voiceSelect = document.getElementById('voice-select');
-		const tokenResponse = await fetch('/session', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ instructions, model: window.REALTIME_MODEL, voice: voiceSelect ? voiceSelect.value : undefined }),
-		});
+                const instructionsInput = document.getElementById('instructions-input');
+                const instructions = instructionsInput?.value || '';
+                const voiceSelect = document.getElementById('voice-select');
+                const voice = voiceSelect?.value || 'nova';
+                const tokenResponse = await fetch('/session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ instructions, model: window.REALTIME_MODEL, voice }),
+                });
 		console.log('Session status', tokenResponse.status);
 		if (!tokenResponse.ok) {
 			const body = await tokenResponse.text();
@@ -296,10 +297,9 @@ async function startRealtime() {
                         showNotification('Failed to start session', false);
                         throw new Error('Missing client secret');
                 }
-		const baseUrl = 'https://api.openai.com/v1/realtime';
-		const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
-		const voice = voiceSelect ? voiceSelect.value : 'nova';
-		const r = await fetch(`${baseUrl}?model=${model}&voice=${voice}`, {
+                const baseUrl = 'https://api.openai.com/v1/realtime';
+                const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
+                const r = await fetch(`${baseUrl}?model=${model}&voice=${voice}`, {
 			method: 'POST',
 			body: offer.sdp,
 			headers: {
@@ -336,13 +336,26 @@ function stopRealtime() {
 	mediaStream = undefined;
 }
 
-document.getElementById('start-voice').addEventListener('click', startRealtime);
-document.getElementById('stop-voice').addEventListener('click', stopRealtime);
-document.getElementById('set-instructions').addEventListener('click', sendInstructions);
-document.getElementById('voice-select').addEventListener('change', sendVoice);
-document.getElementById('model-select').addEventListener('change', sendModel);
-document.getElementById('random-voice').addEventListener('click', randomVoice);
-document.getElementById('load-example').addEventListener('click', loadExampleInstructions);
+const startBtn = document.getElementById('start-voice');
+if (startBtn) startBtn.addEventListener('click', startRealtime);
+
+const stopBtn = document.getElementById('stop-voice');
+if (stopBtn) stopBtn.addEventListener('click', stopRealtime);
+
+const setInstructionsBtn = document.getElementById('set-instructions');
+if (setInstructionsBtn) setInstructionsBtn.addEventListener('click', sendInstructions);
+
+const voiceSelectEl = document.getElementById('voice-select');
+if (voiceSelectEl) voiceSelectEl.addEventListener('change', sendVoice);
+
+const modelSelectEl = document.getElementById('model-select');
+if (modelSelectEl) modelSelectEl.addEventListener('change', sendModel);
+
+const randomVoiceBtn = document.getElementById('random-voice');
+if (randomVoiceBtn) randomVoiceBtn.addEventListener('click', randomVoice);
+
+const loadExampleBtn = document.getElementById('load-example');
+if (loadExampleBtn) loadExampleBtn.addEventListener('click', loadExampleInstructions);
 
 document.addEventListener('DOMContentLoaded', async () => {
 	const voiceSelect = document.getElementById('voice-select');
