@@ -1,49 +1,65 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Material Chat Demo</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css" />
-</head>
-<body>
-  <nav class="primary">
-    <div class="nav-wrapper">
-      <a href="#" class="brand-logo center">Material Chat</a>
-    </div>
-  </nav>
-  <main class="container content layout">
-    <aside class="sidebar">
-      <button class="btn waves-effect waves-light" onclick="talkToTheHand()">Talk to the hand</button>
-      <div id="tools-panel" class="tools-panel">
-        <h5>Tools</h5>
-        <ul id="tools-list"></ul>
-      </div>
-    </aside>
-    <div class="section main-controls">
-      <button id="start-voice" class="btn waves-effect waves-light green">Start Voice</button>
-      <button id="stop-voice" class="btn waves-effect waves-light red" disabled>Stop Voice</button>
-      <div class="instructions-input">
-        <input id="instructions-input" type="text" placeholder="Session instructions" />
-        <button id="set-instructions" class="btn waves-effect waves-light">Set Instructions</button>
-      </div>
-    </div>
-    <div id="chat" class="chat">
-      <div id="messages" class="messages"></div>
-    </div>
-  </main>
-  <footer class="page-footer teal">
-    <div class="footer-copyright">
-      <div class="container">
-        <p>Built with 🧡 on <a class="white-text" href="https://developers.cloudflare.com">Cloudflare Workers</a> and the <a class="white-text" href="https://platform.openai.com/docs/api-reference/realtime">OpenAI Realtime API</a></p>
-      </div>
-    </div>
-  </footer>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  <script>window.REALTIME_MODEL="gpt-4o-realtime-preview-2025-06-03"</script>
-  <script src="/hand.js"></script>
-  <script src="/script.js"></script>
-</body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Material Chat Demo</title>
+		<link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet" />
+		<link rel="stylesheet" href="/styles.css" />
+	</head>
+	<body>
+		<nav class="primary">
+			<div class="nav-wrapper">
+				<a href="#" class="brand-logo center">Material Chat</a>
+			</div>
+		</nav>
+		<main class="container content layout">
+			<aside class="sidebar">
+				<button class="btn waves-effect waves-light" onclick="talkToTheHand()">Talk to the hand</button>
+				<div id="tools-panel" class="tools-panel">
+					<h5>Tools</h5>
+					<ul id="tools-list"></ul>
+				</div>
+			</aside>
+			<div class="section main-controls">
+				<button id="start-voice" class="btn waves-effect waves-light green">Start Voice</button>
+				<button id="stop-voice" class="btn waves-effect waves-light red" disabled>Stop Voice</button>
+				<div class="voice-select">
+					<label for="voice-select">Voice</label>
+					<select id="voice-select" class="browser-default">
+						<option value="nova">nova</option>
+						<option value="onyx">onyx</option>
+						<option value="alloy">alloy</option>
+						<option value="echo">echo</option>
+						<option value="fable">fable</option>
+						<option value="shimmer">shimmer</option>
+					</select>
+				</div>
+				<div class="instructions-input">
+					<input id="instructions-input" type="text" placeholder="Session instructions" />
+					<button id="set-instructions" class="btn waves-effect waves-light">Set Instructions</button>
+				</div>
+			</div>
+			<div id="chat" class="chat">
+				<div id="messages" class="messages"></div>
+			</div>
+		</main>
+		<footer class="page-footer teal">
+			<div class="footer-copyright">
+				<div class="container">
+					<p>
+						Built with 🧡 on <a class="white-text" href="https://developers.cloudflare.com">Cloudflare Workers</a> and the
+						<a class="white-text" href="https://platform.openai.com/docs/api-reference/realtime">OpenAI Realtime API</a>
+					</p>
+				</div>
+			</div>
+		</footer>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+		<script>
+			window.REALTIME_MODEL = 'gpt-4o-realtime-preview-2025-06-03';
+		</script>
+		<script src="/hand.js"></script>
+		<script src="/script.js"></script>
+	</body>
 </html>
