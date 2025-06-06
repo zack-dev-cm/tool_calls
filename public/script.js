@@ -7,6 +7,7 @@ let mediaStream;
 let currentAssistantEl;
 let availableTools = [];
 const VOICES = ['nova', 'onyx', 'alloy', 'echo', 'fable', 'shimmer'];
+const MODELS = ['gpt-4o-realtime-preview-2025-06-03', 'gpt-4o-realtime-preview-2024-12-17'];
 
 function showNotification(message, success = true) {
        if (window.M && M.toast) {
@@ -158,15 +159,21 @@ function sendInstructions() {
 }
 
 function sendVoice() {
-	const select = document.getElementById('voice-select');
-	if (!select || !dataChannel || dataChannel.readyState !== 'open') return;
-	const event = {
-		type: 'session.update',
-		session: {
-			voice: select.value,
-		},
-	};
-	dataChannel.send(JSON.stringify(event));
+        const select = document.getElementById('voice-select');
+        if (!select || !dataChannel || dataChannel.readyState !== 'open') return;
+        const event = {
+                type: 'session.update',
+                session: {
+                        voice: select.value,
+                },
+        };
+        dataChannel.send(JSON.stringify(event));
+}
+
+function sendModel() {
+       const select = document.getElementById('model-select');
+       if (!select) return;
+       window.REALTIME_MODEL = select.value;
 }
 
 function setupPeerConnection() {
@@ -240,18 +247,19 @@ function setupPeerConnection() {
 }
 
 async function startRealtime() {
-	try {
-		setupPeerConnection();
-		mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaStream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
-		const offer = await peerConnection.createOffer();
-		await peerConnection.setLocalDescription(offer);
+       try {
+               setupPeerConnection();
+               mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+               mediaStream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
+               const offer = await peerConnection.createOffer();
+               await peerConnection.setLocalDescription(offer);
                const instructionsInput = document.getElementById('instructions-input');
                const instructions = instructionsInput ? instructionsInput.value : '';
-               const tokenResponse = await fetch('/session', {
+              const voiceSelect = document.getElementById('voice-select');
+              const tokenResponse = await fetch('/session', {
                        method: 'POST',
                        headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify({ instructions }),
+                       body: JSON.stringify({ instructions, model: window.REALTIME_MODEL, voice: voiceSelect ? voiceSelect.value : undefined }),
                });
                console.log('Session status', tokenResponse.status);
                if (!tokenResponse.ok) {
@@ -263,9 +271,8 @@ async function startRealtime() {
 		const data = await tokenResponse.json();
 		const EPHEMERAL_KEY = data.result.client_secret.value;
 		const baseUrl = 'https://api.openai.com/v1/realtime';
-		const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
-		const voiceSelect = document.getElementById('voice-select');
-		const voice = voiceSelect ? voiceSelect.value : 'nova';
+                const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
+                const voice = voiceSelect ? voiceSelect.value : 'nova';
 		const r = await fetch(`${baseUrl}?model=${model}&voice=${voice}`, {
 			method: 'POST',
 			body: offer.sdp,
@@ -307,18 +314,30 @@ document.getElementById('start-voice').addEventListener('click', startRealtime);
 document.getElementById('stop-voice').addEventListener('click', stopRealtime);
 document.getElementById('set-instructions').addEventListener('click', sendInstructions);
 document.getElementById('voice-select').addEventListener('change', sendVoice);
+document.getElementById('model-select').addEventListener('change', sendModel);
 
 document.addEventListener('DOMContentLoaded', async () => {
-	const voiceSelect = document.getElementById('voice-select');
-	if (voiceSelect) {
-		voiceSelect.innerHTML = '';
-		VOICES.forEach((v) => {
-			const opt = document.createElement('option');
-			opt.value = v;
-			opt.textContent = v;
-			voiceSelect.appendChild(opt);
-		});
-	}
+        const voiceSelect = document.getElementById('voice-select');
+        if (voiceSelect) {
+                voiceSelect.innerHTML = '';
+                VOICES.forEach((v) => {
+                        const opt = document.createElement('option');
+                        opt.value = v;
+                        opt.textContent = v;
+                        voiceSelect.appendChild(opt);
+                });
+        }
+       const modelSelect = document.getElementById('model-select');
+       if (modelSelect) {
+               modelSelect.innerHTML = '';
+               MODELS.forEach((m) => {
+                       const opt = document.createElement('option');
+                       opt.value = m;
+                       opt.textContent = m.includes('2024') ? 'legacy' : 'latest';
+                       modelSelect.appendChild(opt);
+               });
+               window.REALTIME_MODEL = modelSelect.value;
+       }
        const tools = await loadTools();
        const list = document.getElementById('tools-list');
        if (list) {
