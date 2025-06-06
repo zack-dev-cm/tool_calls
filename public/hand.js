@@ -7,26 +7,28 @@ class Hand {
 		this.uartService = undefined;
 	}
 
-	async connect() {
-		try {
-			this.bluetoothDevice = await navigator.bluetooth.requestDevice({
-				filters: [{ namePrefix: "BBC" }], // Filter for devices with names starting with "BBC"
-				optionalServices: [UART_SERVICE_UUID],
-			});
+       async connect() {
+               try {
+                       this.bluetoothDevice = await navigator.bluetooth.requestDevice({
+                               filters: [{ namePrefix: "BBC" }], // Filter for devices with names starting with "BBC"
+                               optionalServices: [UART_SERVICE_UUID],
+                       });
 
 			const server = await this.bluetoothDevice.gatt.connect();
 			const service = await server.getPrimaryService(UART_SERVICE_UUID);
 			this.uartService = await service.getCharacteristic(UART_TX_UUID);
 
-			console.log("Connected to hand!");
-		} catch (error) {
-			console.error("Failed to connect to hand:", error);
-			alert("Failed to connect to hand. Please try again.");
-		}
-	}
+                       console.log("Connected to hand!");
+                       return true;
+               } catch (error) {
+                       console.error("Failed to connect to hand:", error);
+                       alert("Failed to connect to hand. Please try again.");
+                       return false;
+               }
+       }
 
-	async sendCommand(actionNumber) {
-		if (this.uartService === undefined) {
+       async sendCommand(actionNumber) {
+               if (this.uartService === undefined) {
 			console.error("Not connected to micro:bit");
 			alert("Please connect to Hand first!");
 			return;
@@ -34,13 +36,15 @@ class Hand {
 		try {
 			// Convert action number to hex and pad to two characters
 			const hexAction = actionNumber.toString(16).toUpperCase().padStart(2, "0");
-			const command = `CMD|0F|${hexAction}|$`;
-			const encoder = new TextEncoder();
-			await this.uartService.writeValue(encoder.encode(command));
-			console.log(`Command sent: ${command}`);
-		} catch (error) {
-			console.error("Failed to send command:", error);
-			alert("Failed to send command to Yorick.");
-		}
-	}
+                       const command = `CMD|0F|${hexAction}|$`;
+                       const encoder = new TextEncoder();
+                       await this.uartService.writeValue(encoder.encode(command));
+                       console.log(`Command sent: ${command}`);
+                       return true;
+               } catch (error) {
+                       console.error("Failed to send command:", error);
+                       alert("Failed to send command to Yorick.");
+                       return false;
+               }
+       }
 }

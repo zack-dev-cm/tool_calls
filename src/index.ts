@@ -17,37 +17,51 @@ app.use('/session', auth);
 app.use('/tools', auth);
 app.use('/tools/*', auth);
 
-const isMcpEnabled = (env: Env) => env.MCP_ENABLED !== 'false';
+const isMcpEnabled = (env: Env) => env.MCP_ENABLED === 'true';
 
 const DEFAULT_INSTRUCTIONS = `You are helpful and have some tools installed.
 
 In the tools you have the ability to control a robot hand.
 `;
 
+async function createSession(c: any, instructions: string) {
+       let tools: ToolDefinition[] = [];
+       if (isMcpEnabled(c.env)) {
+               try {
+                       tools = await fetchTools(c.env.MCP_SERVER_URL);
+               } catch (err) {
+                       console.warn('Unable to fetch tools:', err);
+               }
+       }
+       const model = c.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
+       const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
+               method: 'POST',
+               headers: {
+                       Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
+                       'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({
+                       model,
+                       instructions,
+               }),
+       });
+       const result = await response.json();
+       return c.json({ result, tools });
+}
+
 // Learn more: https://platform.openai.com/docs/api-reference/realtime-sessions/create
 app.get('/session', async (c) => {
-        let tools: ToolDefinition[] = [];
-        if (isMcpEnabled(c.env)) {
-                try {
-                        tools = await fetchTools(c.env.MCP_SERVER_URL);
-                } catch (err) {
-                        console.warn('Unable to fetch tools:', err);
-                }
-        }
-	const model = c.env.OPENAI_REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
-	const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
-		method: 'POST',
-		headers: {
-			Authorization: `Bearer ${c.env.OPENAI_API_KEY}`,
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({
-			model,
-			instructions: DEFAULT_INSTRUCTIONS,
-		}),
-	});
-	const result = await response.json();
-	return c.json({ result, tools });
+       return createSession(c, DEFAULT_INSTRUCTIONS);
+});
+
+app.post('/session', async (c) => {
+       let body: { instructions?: string } = {};
+       try {
+               body = await c.req.json();
+       } catch {
+               body = {};
+       }
+       return createSession(c, body.instructions || DEFAULT_INSTRUCTIONS);
 });
 
 app.get('/tools', async (c) => {
