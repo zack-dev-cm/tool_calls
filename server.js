@@ -5,6 +5,7 @@ import { config } from 'dotenv';
 config({ path: '.dev.vars', override: true });
 
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:3000';
+const AUTH_TOKEN = process.env.AUTH_TOKEN || '';
 
 const DEFAULT_INSTRUCTIONS = `You are helpful and have some tools installed.
 
@@ -13,6 +14,17 @@ In the tools you have the ability to control a robot hand.
 
 const app = express();
 app.use(cors());
+const auth = (req, res, next) => {
+  if (!AUTH_TOKEN) return next();
+  const header = req.get('Authorization') || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : header;
+  if (token !== AUTH_TOKEN) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+};
+app.use('/session', auth);
+app.use('/tools', auth);
 
 app.get('/session', async (req, res) => {
   let tools = [];

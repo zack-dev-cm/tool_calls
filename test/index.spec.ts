@@ -18,9 +18,28 @@ describe('Hello World worker', () => {
 		expect(await response.text()).toMatchInlineSnapshot(`"404 Not Found"`);
 	});
 
-        it('responds with Hello World! (integration style)', async () => {
-                const response = await SELF.fetch('https://example.com');
-                const text = await response.text();
-                expect(text).toContain('<div id="tools-panel"');
-        });
+	it('responds with Hello World! (integration style)', async () => {
+		const response = await SELF.fetch('https://example.com');
+		const text = await response.text();
+		expect(text).toContain('<div id="tools-panel"');
+	});
+
+	it('rejects unauthorized API requests', async () => {
+		env.AUTH_TOKEN = 'secret';
+		const request = new IncomingRequest('http://example.com/session');
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).toBe(401);
+	});
+
+	it('accepts authorized API requests', async () => {
+		env.AUTH_TOKEN = 'secret';
+		const request = new IncomingRequest('http://example.com/session');
+		request.headers.set('Authorization', 'Bearer secret');
+		const ctx = createExecutionContext();
+		const response = await worker.fetch(request, env, ctx);
+		await waitOnExecutionContext(ctx);
+		expect(response.status).not.toBe(401);
+	});
 });

@@ -2,3 +2,4 @@ OPENAI_API_KEY="YOUR-API-KEY"
 
 MCP_SERVER_URL="http://localhost:3000"
 OPENAI_REALTIME_MODEL="gpt-4o-realtime-preview-2025-06-03"
+AUTH_TOKEN="your-secret"
