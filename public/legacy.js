@@ -9,11 +9,26 @@ function addMessage(role, text) {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 
-function talkToTheHand() {
-	hand
-		.connect()
-		.then(() => console.log('Hand is ready'))
-		.catch((err) => console.error(err));
+const ALLOWED_EMAIL = 'kaisenaiko@gmail.com';
+
+function verifyUserAuth() {
+        const stored = localStorage.getItem('userEmail');
+        if (stored === ALLOWED_EMAIL) return true;
+        const email = prompt('Enter email to control the device:');
+        if (email === ALLOWED_EMAIL) {
+                localStorage.setItem('userEmail', email);
+                return true;
+        }
+        alert('Unauthorized user');
+        return false;
+}
+
+function controlBluetoothDevice() {
+        if (!verifyUserAuth()) return;
+        hand
+                .connect()
+                .then(() => console.log('Hand is ready'))
+                .catch((err) => console.error(err));
 }
 
 const fns = {
