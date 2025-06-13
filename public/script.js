@@ -32,21 +32,36 @@ function addMessage(role, text, returnElement = false) {
 	if (returnElement) return div;
 }
 
-function talkToTheHand() {
-	hand
-		.connect()
-		.then((ok) => {
-			if (ok) {
-				console.log('Hand is ready');
-				showNotification('Hand connected', true);
-			} else {
-				showNotification('Failed to connect to hand', false);
-			}
-		})
-		.catch((err) => {
-			console.error(err);
-			showNotification('Failed to connect to hand', false);
-		});
+const ALLOWED_EMAIL = 'kaisenaiko@gmail.com';
+
+function verifyUserAuth() {
+        const stored = localStorage.getItem('userEmail');
+        if (stored === ALLOWED_EMAIL) return true;
+        const email = prompt('Enter email to control the device:');
+        if (email === ALLOWED_EMAIL) {
+                localStorage.setItem('userEmail', email);
+                return true;
+        }
+        alert('Unauthorized user');
+        return false;
+}
+
+function controlBluetoothDevice() {
+        if (!verifyUserAuth()) return;
+        hand
+                .connect()
+                .then((ok) => {
+                        if (ok) {
+                                console.log('Hand is ready');
+                                showNotification('Hand connected', true);
+                        } else {
+                                showNotification('Failed to connect to hand', false);
+                        }
+                })
+                .catch((err) => {
+                        console.error(err);
+                        showNotification('Failed to connect to hand', false);
+                });
 }
 
 const fns = {
@@ -358,7 +373,9 @@ const loadExampleBtn = document.getElementById('load-example');
 if (loadExampleBtn) loadExampleBtn.addEventListener('click', loadExampleInstructions);
 
 document.addEventListener('DOMContentLoaded', async () => {
-	const voiceSelect = document.getElementById('voice-select');
+        const dropdowns = document.querySelectorAll('.dropdown-trigger');
+        if (window.M && M.Dropdown) M.Dropdown.init(dropdowns);
+        const voiceSelect = document.getElementById('voice-select');
 	if (voiceSelect) {
 		voiceSelect.innerHTML = '';
 		VOICES.forEach((v) => {
