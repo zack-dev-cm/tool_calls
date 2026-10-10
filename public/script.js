@@ -1,9 +1,8 @@
 const hand = new Hand();
 const messagesContainer = document.getElementById('messages');
 let toolsList = [];
-let peerConnection;
 let dataChannel;
-let mediaStream;
+let realtimeSession;
 let currentAssistantEl;
 let availableTools = [];
 const VOICES = ['nova', 'onyx', 'alloy', 'echo', 'fable', 'shimmer', 'ash'];
@@ -135,17 +134,18 @@ const TOOL_DESCRIPTORS = [
 	},
 ];
 
-async function loadTools() {
-	const res = await fetch('/tools');
+async function loadTools(signal) {
+	const res = await fetch('/tools', signal ? { signal } : undefined);
 	const data = await res.json();
 	toolsList = data.tools || [];
 	availableTools = toolsList.concat(TOOL_DESCRIPTORS);
 	return availableTools;
 }
 
-async function configureData() {
+async function configureData(session) {
 	console.log('Configuring data channel');
-	await loadTools();
+	await loadTools(session.controller.signal);
+	if (realtimeSession !== session || session.channel.readyState !== 'open') return;
 	const selected = availableTools.filter((t) => {
 		const cb = document.querySelector(`input.tool-checkbox[data-tool-name="${t.name}"]`);
 		return !cb || cb.checked;
@@ -164,7 +164,7 @@ async function configureData() {
 	if (!includesAll) {
 		console.error('Missing local tools in session.update', event);
 	}
-	dataChannel.send(JSON.stringify(event));
+	session.channel.send(JSON.stringify(event));
 }
 
 function sendInstructions() {
@@ -212,25 +212,52 @@ function randomVoice() {
 	sendVoice();
 }
 
-function setupPeerConnection() {
-	peerConnection = new RTCPeerConnection();
+function setupPeerConnection(session) {
+	const peer = session.peer = new RTCPeerConnection();
 
-	peerConnection.ontrack = (event) => {
+	peer.ontrack = (event) => {
+		if (realtimeSession !== session) return;
 		const el = document.createElement('audio');
 		el.srcObject = event.streams[0];
 		el.autoplay = el.controls = true;
 		document.body.appendChild(el);
+		session.audio.push(el);
+	};
+	peer.onconnectionstatechange = () => {
+		if (realtimeSession === session && ['failed', 'closed'].includes(peer.connectionState)) {
+			stopRealtime();
+			setRealtimeStatus('Connection ended. You can start again.');
+		}
 	};
 
-	dataChannel = peerConnection.createDataChannel('oai-events');
-	dataChannel.addEventListener('open', (ev) => {
-		console.log('Opening data channel', ev);
-		configureData();
-		sendInstructions();
+	const channel = session.channel = peer.createDataChannel('oai-events');
+	dataChannel = channel;
+	channel.addEventListener('close', () => {
+		if (realtimeSession === session) stopRealtime();
+	});
+	channel.addEventListener('open', async () => {
+		if (realtimeSession !== session) return;
+		try {
+			await configureData(session);
+			if (realtimeSession === session && channel.readyState === 'open') sendInstructions();
+		} catch {
+			if (realtimeSession !== session) return;
+			stopRealtime();
+			setRealtimeStatus('Could not configure the session. Try again.');
+			showNotification('Could not configure the session. Try again.', false);
+		}
 	});
 
-	dataChannel.addEventListener('message', async (ev) => {
-		const msg = JSON.parse(ev.data);
+	channel.addEventListener('message', async (ev) => {
+		if (realtimeSession !== session) return;
+		let msg;
+		try {
+			msg = JSON.parse(ev.data);
+		} catch {
+			showNotification('Could not read the realtime event', false);
+			return;
+		}
+		if (!msg || typeof msg.type !== 'string') return;
 		if (msg.type && msg.type.startsWith('transcript')) {
 			const text = msg.transcript || msg.text;
 			if (text) addMessage('user', text);
@@ -252,43 +279,72 @@ function setupPeerConnection() {
 			if (text) addMessage('assistant', text);
 		}
 		if (msg.type === 'response.function_call_arguments.done') {
-			const fn = fns[msg.name];
-			let result;
-			const args = JSON.parse(msg.arguments);
-			if (fn !== undefined) {
-				console.log(`Calling local function ${msg.name} with ${msg.arguments}`);
-				result = await fn(args);
-			} else {
-				const resp = await fetch(`/tools/${msg.name}`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(args),
-				});
-				result = await resp.json();
-				showNotification(`Tool ${msg.name} executed`, resp.ok);
+			try {
+				const fn = fns[msg.name];
+				let result;
+				const args = JSON.parse(msg.arguments);
+				if (fn !== undefined) {
+					result = await fn(args);
+				} else {
+					const resp = await fetch(`/tools/${msg.name}`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(args),
+						signal: session.controller.signal,
+					});
+					result = await resp.json();
+					if (realtimeSession !== session) return;
+					showNotification(`Tool ${msg.name} executed`, resp.ok);
+				}
+				if (realtimeSession !== session || channel.readyState !== 'open') return;
+				const event = {
+					type: 'conversation.item.create',
+					item: {
+						type: 'function_call_output',
+						call_id: msg.call_id,
+						output: JSON.stringify(result),
+					},
+				};
+				channel.send(JSON.stringify(event));
+				channel.send(JSON.stringify({ type: 'response.create' }));
+			} catch {
+				if (realtimeSession === session) showNotification('Could not run the realtime tool', false);
 			}
-			console.log('result', result);
-			const event = {
-				type: 'conversation.item.create',
-				item: {
-					type: 'function_call_output',
-					call_id: msg.call_id,
-					output: JSON.stringify(result),
-				},
-			};
-			dataChannel.send(JSON.stringify(event));
-			dataChannel.send(JSON.stringify({ type: 'response.create' }));
 		}
 	});
 }
 
+function setRealtimeStatus(message) {
+	const status = document.getElementById('connection-status');
+	if (status) status.textContent = message;
+}
+
+function updateRealtimeControls(active) {
+	const start = document.getElementById('start-voice');
+	const stop = document.getElementById('stop-voice');
+	if (start) start.disabled = active;
+	if (stop) stop.disabled = !active;
+}
+
 async function startRealtime() {
+	if (realtimeSession) return;
+	const session = { controller: new AbortController(), audio: [] };
+	realtimeSession = session;
+	updateRealtimeControls(true);
+	setRealtimeStatus('Connecting…');
 	try {
-		setupPeerConnection();
-		mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		mediaStream.getTracks().forEach((track) => peerConnection.addTransceiver(track, { direction: 'sendrecv' }));
-		const offer = await peerConnection.createOffer();
-		await peerConnection.setLocalDescription(offer);
+		setupPeerConnection(session);
+		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+		if (realtimeSession !== session) {
+			stream.getTracks().forEach((track) => track.stop());
+			return;
+		}
+		session.stream = stream;
+		stream.getTracks().forEach((track) => session.peer.addTransceiver(track, { direction: 'sendrecv' }));
+		const offer = await session.peer.createOffer();
+		if (realtimeSession !== session) return;
+		await session.peer.setLocalDescription(offer);
+		if (realtimeSession !== session) return;
                 const instructionsInput = document.getElementById('instructions-input');
                 const instructions = instructionsInput?.value || '';
                 const voiceSelect = document.getElementById('voice-select');
@@ -297,20 +353,18 @@ async function startRealtime() {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ instructions, model: window.REALTIME_MODEL, voice }),
+                        signal: session.controller.signal,
                 });
+		if (realtimeSession !== session) return;
 		console.log('Session status', tokenResponse.status);
 		if (!tokenResponse.ok) {
-			const body = await tokenResponse.text();
-			console.error('Session error body', body);
-			showNotification('Failed to start session', false);
-			throw new Error('Session request failed');
+			throw new Error(`Session request failed (${tokenResponse.status}). Try again.`);
 		}
                 const data = await tokenResponse.json();
-                const EPHEMERAL_KEY = data.result?.client_secret?.value;
-                if (!EPHEMERAL_KEY) {
-                        console.error('Missing client secret in session response', data);
-                        showNotification('Failed to start session', false);
-                        throw new Error('Missing client secret');
+                if (realtimeSession !== session) return;
+                const EPHEMERAL_KEY = data?.result?.client_secret?.value;
+                if (typeof EPHEMERAL_KEY !== 'string' || !EPHEMERAL_KEY.trim()) {
+                        throw new Error('The server did not return a session token. Try again.');
                 }
                 const baseUrl = 'https://api.openai.com/v1/realtime';
                 const model = window.REALTIME_MODEL || 'gpt-4o-realtime-preview-2025-06-03';
@@ -321,34 +375,47 @@ async function startRealtime() {
 				Authorization: `Bearer ${EPHEMERAL_KEY}`,
 				'Content-Type': 'application/sdp',
 			},
+			signal: session.controller.signal,
 		});
+		if (realtimeSession !== session) return;
 		console.log('OpenAI status', r.status);
 		if (!r.ok) {
-			const body = await r.text();
-			console.error('OpenAI error body', body);
-			showNotification('Failed to connect to OpenAI', false);
-			throw new Error('OpenAI connection failed');
+			throw new Error(`Voice connection failed (${r.status}). Try again.`);
 		}
 		const answer = await r.text();
-		await peerConnection.setRemoteDescription({
+		if (realtimeSession !== session) return;
+		await session.peer.setRemoteDescription({
 			sdp: answer,
 			type: 'answer',
 		});
+		if (realtimeSession !== session) return;
+		setRealtimeStatus('Voice session ready.');
 		showNotification('Realtime session started', true);
 	} catch (err) {
-		console.error(err);
-		showNotification('Error starting session', false);
+		if (realtimeSession !== session) return;
+		// Do not log session responses or ephemeral credentials on failure.
+		const message = err instanceof Error && /^(Session request failed|Voice connection failed|The server did not return)/.test(err.message)
+			? err.message : 'Could not start voice. Check microphone access and try again.';
 		stopRealtime();
+		setRealtimeStatus(message);
+		showNotification(message, false);
 	}
 }
 
 function stopRealtime() {
-	if (dataChannel) dataChannel.close();
-	if (peerConnection) peerConnection.close();
-	if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
-	peerConnection = undefined;
+	const session = realtimeSession;
+	realtimeSession = undefined;
+	if (session) {
+		session.controller.abort();
+		if (session.channel) session.channel.close();
+		if (session.peer) session.peer.close();
+		if (session.stream) session.stream.getTracks().forEach((track) => track.stop());
+		session.audio.forEach((el) => { el.srcObject = null; el.remove(); });
+	}
 	dataChannel = undefined;
-	mediaStream = undefined;
+	currentAssistantEl = undefined;
+	updateRealtimeControls(false);
+	setRealtimeStatus('Voice session stopped.');
 }
 
 const startBtn = document.getElementById('start-voice');

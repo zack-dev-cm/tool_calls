@@ -8,6 +8,7 @@
     "dev": "wrangler dev",
     "start": "node server.js",
     "test": "vitest",
+    "test:realtime": "node --test test-node/realtime.test.mjs",
     "cf-typegen": "wrangler types",
     "mcp": "node mock-mcp-server.js"
   },

@@ -1,6 +1,6 @@
 // test/index.spec.ts
 import { env, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import worker from '../src/index';
 
 // For now, you'll need to do something like this to get a correctly-typed
@@ -8,6 +8,10 @@ import worker from '../src/index';
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
 describe('Hello World worker', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		env.AUTH_TOKEN = '';
+	});
 	it('responds with Hello World! (unit style)', async () => {
 		const request = new IncomingRequest('http://example.com');
 		// Create an empty context to pass to `worker.fetch()`.
@@ -35,11 +39,19 @@ describe('Hello World worker', () => {
 
 	it('accepts authorized API requests', async () => {
 		env.AUTH_TOKEN = 'secret';
+		const sessionFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+			client_secret: { value: 'test-ephemeral' },
+		})));
+		vi.stubGlobal('fetch', sessionFetch);
 		const request = new IncomingRequest('http://example.com/session');
 		request.headers.set('Authorization', 'Bearer secret');
 		const ctx = createExecutionContext();
 		const response = await worker.fetch(request, env, ctx);
 		await waitOnExecutionContext(ctx);
-		expect(response.status).not.toBe(401);
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			result: { client_secret: { value: 'test-ephemeral' } }, tools: [],
+		});
+		expect(sessionFetch).toHaveBeenCalledOnce();
 	});
 });
